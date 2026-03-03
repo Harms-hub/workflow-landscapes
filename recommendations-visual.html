@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recommendations — Where to Intervene</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#e2e8f0;min-width:1000px;}
+.page{padding:32px 48px 60px;max-width:1200px;margin:0 auto;}
+.subtitle{font-size:13px;color:#64748b;margin-bottom:24px;max-width:780px;line-height:1.6;}
+
+.landscape-wrap{position:relative;margin-bottom:4px;}
+.landscape-wrap svg{display:block;width:100%;height:120px;}
+.phase-labels{display:flex;margin-top:2px;padding:0 4px;}
+.phase-lbl{font-size:9px;color:#475569;text-align:center;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+.phase-lbl span{display:block;font-weight:400;font-size:8px;text-transform:none;letter-spacing:0;color:#334155;margin-top:1px;}
+
+.drop-lines{position:relative;height:40px;}
+.drop-line{position:absolute;top:0;width:2px;border-radius:1px;}
+.drop-num{position:absolute;bottom:0;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;transform:translateX(-50%);border:2px solid #0f0f1a;}
+
+.rec-cards{display:flex;gap:10px;margin-top:12px;transition:opacity .2s ease;}
+.rec-cards.fade-out{opacity:0;}
+
+.card-wrapper{flex:1;min-width:0;cursor:pointer;overflow:hidden;}
+
+.card-inner{position:relative;width:100%;}
+
+.card-front{border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;}
+.card-front::before{content:'';position:absolute;left:0;top:0;right:0;height:3px;}
+.card-wrapper.expanded .card-front{display:none;}
+.card-wrapper.collapsed{display:none;}
+
+.card-back{display:none;border-radius:12px;padding:18px 22px;border:1px solid rgba(255,255,255,0.12);background:rgba(15,15,26,0.97);position:relative;overflow:hidden;}
+.card-back::before{content:'';position:absolute;left:0;top:0;right:0;height:3px;}
+.card-wrapper.expanded .card-back{display:block;}
+.card-wrapper.expanded{flex:5;}
+
+.card-front:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.12);}
+
+.rec-header{display:flex;align-items:center;gap:8px;}
+.rec-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;color:#fff;}
+.rec-where{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;line-height:1.3;}
+.rec-title{font-size:13px;font-weight:700;color:#fff;line-height:1.3;}
+.rec-desc{font-size:10px;line-height:1.6;color:#94a3b8;}
+.rec-evidence{padding:7px 10px;border-radius:6px;font-size:9px;font-style:italic;line-height:1.5;background:rgba(255,255,255,0.03);color:#64748b;border:1px solid rgba(255,255,255,0.04);}
+.rec-tag{display:inline-block;font-size:8px;font-weight:600;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px;}
+
+.reach-row{display:flex;flex-direction:column;gap:4px;margin-top:auto;padding-top:6px;}
+.reach-bar{height:5px;border-radius:3px;background:rgba(255,255,255,0.06);width:100%;overflow:hidden;}
+.reach-fill{height:100%;border-radius:3px;}
+.reach-text{font-size:10px;font-weight:600;}
+.reach-detail{font-size:8px;color:#475569;}
+
+.c1::before,.c1 .card-front::before,.c1 .card-back::before{background:#f472b6;} .c1 .rec-num{background:rgba(244,114,182,0.15);color:#f472b6;} .c1 .rec-where{color:#f472b6;}
+.c2::before,.c2 .card-front::before,.c2 .card-back::before{background:#c084fc;} .c2 .rec-num{background:rgba(192,132,252,0.15);color:#c084fc;} .c2 .rec-where{color:#c084fc;}
+.c3::before,.c3 .card-front::before,.c3 .card-back::before{background:#fbbf24;} .c3 .rec-num{background:rgba(251,191,36,0.15);color:#fbbf24;} .c3 .rec-where{color:#fbbf24;}
+.c4::before,.c4 .card-front::before,.c4 .card-back::before{background:#60a5fa;} .c4 .rec-num{background:rgba(96,165,250,0.15);color:#60a5fa;} .c4 .rec-where{color:#60a5fa;}
+.c5::before,.c5 .card-front::before,.c5 .card-back::before{background:#34d399;} .c5 .rec-num{background:rgba(52,211,153,0.15);color:#34d399;} .c5 .rec-where{color:#34d399;}
+
+.card-wrapper.highlight{transform:translateY(-3px);}
+.card-wrapper.highlight .card-front{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.18);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
+
+/* Back of card */
+.back-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.back-title{font-size:14px;font-weight:700;color:#fff;}
+.back-hint{font-size:9px;color:#94a3b8;margin-left:auto;text-transform:uppercase;letter-spacing:.3px;background:rgba(255,255,255,0.06);padding:5px 14px;border-radius:6px;cursor:pointer;transition:all .2s;}
+.back-hint:hover{background:rgba(255,255,255,0.12);color:#fff;}
+
+.back-body{display:flex;gap:20px;align-items:flex-start;}
+.back-video-col{flex:3;min-width:0;}
+.back-quotes-col{flex:2;min-width:0;}
+
+.video-mock{border-radius:10px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.06);aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;}
+.video-mock::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.02),transparent);}
+.play-btn{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.2);position:relative;z-index:1;}
+.play-btn svg{width:18px;height:18px;fill:#fff;opacity:.4;margin-left:2px;}
+.video-label{font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.4px;position:relative;z-index:1;}
+
+.video-real{border-radius:10px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,0.08);}
+.video-real video{width:100%;display:block;border-radius:10px;}
+.video-caption{font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.4px;text-align:center;padding:6px 0 2px;}
+
+.back-quotes{display:flex;flex-direction:column;gap:8px;}
+.back-quotes-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#475569;margin-bottom:2px;}
+.back-quote{padding:10px 12px;border-radius:8px;font-size:11px;font-style:italic;line-height:1.6;background:rgba(255,255,255,0.02);color:#94a3b8;border-left:2px solid rgba(255,255,255,0.1);}
+.back-quote .q-source{display:block;font-style:normal;font-weight:600;font-size:9px;margin-top:4px;color:#64748b;}
+
+@keyframes pulse-dot{0%,100%{r:5;opacity:.9;}50%{r:8;opacity:.5;}}
+#cursor-dot{pointer-events:none;}
+#cursor-line{pointer-events:none;}
+
+@keyframes marker-pulse{0%,100%{r:5;opacity:1;}50%{r:10;opacity:.4;}}
+.marker-ring{pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="subtitle">Five interventions mapped across the end-to-end creative workflow. Validated across 16 participants: 7 moderated sessions (prototype exposure) and 9 unmoderated UserTesting sessions (current state).</p>
+
+  <div class="landscape-wrap">
+    <svg id="landscape" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg>
+    <div class="phase-labels">
+      <div class="phase-lbl" style="flex:10;">Pre-Canva<span>Ideation</span></div>
+      <div class="phase-lbl" style="flex:16;">Search &amp; Select<span>Templates &amp; library</span></div>
+      <div class="phase-lbl" style="flex:24;">Manual Work<span>The valley</span></div>
+      <div class="phase-lbl" style="flex:28;">AI Features<span>Generate, edit, write</span></div>
+      <div class="phase-lbl" style="flex:14;">Polish<span>Final touches</span></div>
+      <div class="phase-lbl" style="flex:8;"></div>
+    </div>
+  </div>
+
+  <div class="drop-lines">
+    <div class="drop-line" style="left:5%;height:28px;background:linear-gradient(to bottom,#f472b6,transparent);"></div>
+    <div class="drop-num" style="left:5%;background:#f472b6;">1</div>
+    <div class="drop-line" style="left:18%;height:28px;background:linear-gradient(to bottom,#c084fc,transparent);"></div>
+    <div class="drop-num" style="left:18%;background:#c084fc;">2</div>
+    <div class="drop-line" style="left:38%;height:28px;background:linear-gradient(to bottom,#fbbf24,transparent);"></div>
+    <div class="drop-num" style="left:38%;background:#fbbf24;">3</div>
+    <div class="drop-line" style="left:64%;height:28px;background:linear-gradient(to bottom,#60a5fa,transparent);"></div>
+    <div class="drop-num" style="left:64%;background:#60a5fa;">4</div>
+    <div class="drop-line" style="left:85%;height:28px;background:linear-gradient(to bottom,#34d399,transparent);"></div>
+    <div class="drop-num" style="left:85%;background:#34d399;">5</div>
+  </div>
+
+  <div class="rec-cards">
+
+    <!-- Card 1: Close External AI Gap -->
+    <div class="card-wrapper c1" data-card="0">
+      <div class="card-inner">
+        <div class="card-front">
+          <div class="rec-header"><div class="rec-num">1</div><div class="rec-where">Pre-Canva<br>Ideation</div></div>
+          <div class="rec-title">Close the External AI Gap</div>
+          <div class="rec-desc">Users start in ChatGPT or Gemini for presentation outlines and content structuring. The gap isn't design inspiration — Canva's library handles that. It's structured content planning.</div>
+          <div class="rec-evidence">"I need you to make this more fun… put a spin on this" — P6, to ChatGPT, not Canva.</div>
+          <div class="reach-row">
+            <div class="reach-bar"><div class="reach-fill" style="width:31%;background:#f472b6;"></div></div>
+            <span class="reach-text" style="color:#f472b6;">5 of 16</span>
+            <span class="reach-detail">P3, P5, P6 + UT-P2, UT-P3</span>
+          </div>
+        </div>
+        <div class="card-back">
+          <div class="back-header">
+            <div class="rec-num">1</div>
+            <div class="back-title">Close the External AI Gap</div>
+            <div class="back-hint">&#10005; Close</div>
+          </div>
+          <div class="back-body">
+            <div class="back-video-col">
+              <div class="video-real">
+                <video controls preload="metadata" onclick="event.stopPropagation();">
+                  <source src="usertesting-clip.mp4" type="video/mp4">
+                </video>
+                <div class="video-caption">UserTesting clip — External AI usage</div>
+              </div>
+            </div>
+            <div class="back-quotes-col">
+              <div class="back-quotes">
+                <div class="back-quotes-label">Supporting evidence</div>
+                <div class="back-quote">"I need you to make this more fun… a different vibe… put a spin on this for the Italian presentation."<span class="q-source">— P6, talking to ChatGPT before opening Canva</span></div>
+                <div class="back-quote">"I use the ChatGPT for getting all the information that I need for getting the presentation content ready."<span class="q-source">— UT-P3, on why she starts outside Canva</span></div>
+                <div class="back-quote">"I always start with ChatGPT to outline my slides — what should be on each one — then I go to Canva to make it look good."<span class="q-source">— P5, describing the two-tool workflow</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Claim Ideation -->
+    <div class="card-wrapper c2" data-card="1" style="opacity:.7;">
+      <div class="card-inner">
+        <div class="card-front">
+          <div class="rec-header"><div class="rec-num">2</div><div class="rec-where">Project Creation<br>Before editor</div></div>
+          <div class="rec-title">Claim Ideation at Project Creation</div>
+          <div class="rec-tag" style="background:rgba(192,132,252,0.12);color:#c084fc;border:1px solid rgba(192,132,252,0.2);">Nice to Have</div>
+          <div class="rec-desc">Surface AI planning at project creation: "What are you making? Let AI help you plan." Extends Rec 1 from closing the gap to proactively owning the phase.</div>
+          <div class="rec-evidence">"It tells me what I should even include in a pitch deck." — P6</div>
+          <div class="reach-row">
+            <div class="reach-bar"><div class="reach-fill" style="width:31%;background:#c084fc;"></div></div>
+            <span class="reach-text" style="color:#c084fc;">5 of 16</span>
+            <span class="reach-detail">P3, P5, P6 + UT-P2, UT-P3</span>
+          </div>
+        </div>
+        <div class="card-back">
+          <div class="back-header">
+            <div class="rec-num">2</div>
+            <div class="back-title">Claim Ideation at Project Creation</div>
+            <div class="back-hint">&#10005; Close</div>
+          </div>
+          <div class="back-body">
+            <div class="back-video-col">
+              <div class="video-mock">
+                <div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="video-label">Highlight reel — Project creation moments</div>
+              </div>
+            </div>
+            <div class="back-quotes-col">
+              <div class="back-quotes">
+                <div class="back-quotes-label">Supporting evidence</div>
+                <div class="back-quote">"It tells me what I should even include in a pitch deck… like what slides, what content."<span class="q-source">— P6, on what ChatGPT gives her that Canva doesn't</span></div>
+                <div class="back-quote">"If Canva asked me 'what are you making?' and helped me plan it out before I started, that'd be huge."<span class="q-source">— P3, imagining a better start</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Fill AI Desert (was card 4) -->
+    <div class="card-wrapper c3" data-card="2">
+      <div class="card-inner">
+        <div class="card-front">
+          <div class="rec-header"><div class="rec-num">3</div><div class="rec-where">Manual Valley<br>The middle</div></div>
+          <div class="rec-title">Fill the AI Desert</div>
+          <div class="rec-desc">Zero AI presence in the middle of every workflow. Users default to manual because AI doesn't surface there. Introduce lightweight micro-assists — smart alignment, layout suggestions, colour harmonisation — without requiring users to seek them.</div>
+          <div class="rec-evidence">"Assuming I can do most things on my own without AI… I use it less." — P2</div>
+          <div class="reach-row">
+            <div class="reach-bar"><div class="reach-fill" style="width:88%;background:#fbbf24;"></div></div>
+            <span class="reach-text" style="color:#fbbf24;">14 of 16</span>
+            <span class="reach-detail">All 7 moderated + 7 UT</span>
+          </div>
+        </div>
+        <div class="card-back">
+          <div class="back-header">
+            <div class="rec-num">3</div>
+            <div class="back-title">Fill the AI Desert</div>
+            <div class="back-hint">&#10005; Close</div>
+          </div>
+          <div class="back-body">
+            <div class="back-video-col">
+              <div class="video-mock">
+                <div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="video-label">Highlight reel — The manual valley</div>
+              </div>
+            </div>
+            <div class="back-quotes-col">
+              <div class="back-quotes">
+                <div class="back-quotes-label">Supporting evidence</div>
+                <div class="back-quote">"In the middle, assuming I can do most things on my own without AI… I use it less."<span class="q-source">— P2, on why AI drops off mid-workflow</span></div>
+                <div class="back-quote">"Searching is actually faster than waiting for AI to generate."<span class="q-source">— UT-P6, choosing manual over AI</span></div>
+                <div class="back-quote">"I manually move things around, adjust spacing, do all the fiddly bits myself — there's nothing helping me here."<span class="q-source">— P4, during manual editing phase</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Lower Capability Bar (was card 3) -->
+    <div class="card-wrapper c4" data-card="3">
+      <div class="card-inner">
+        <div class="card-front">
+          <div class="rec-header"><div class="rec-num">4</div><div class="rec-where">AI Features<br>Entry points</div></div>
+          <div class="rec-title">Lower the Bar for "Capable"</div>
+          <div class="rec-desc">Not education — reduce what "capable" means. Pre-built prompts, contextual suggestions, one-click actions. Recognise prompt content and surface quick-apply: "match my style," "apply brand." UT-P10 didn't know Canva AI existed; UT-P7/P8 gave up entirely.</div>
+          <div class="rec-evidence">"It's way easier to just find the template and add the colors myself than it is to prompt." — P1</div>
+          <div class="reach-row">
+            <div class="reach-bar"><div class="reach-fill" style="width:75%;background:#60a5fa;"></div></div>
+            <span class="reach-text" style="color:#60a5fa;">12 of 16</span>
+            <span class="reach-detail">All except P7, UT-P3, UT-P4</span>
+          </div>
+        </div>
+        <div class="card-back">
+          <div class="back-header">
+            <div class="rec-num">4</div>
+            <div class="back-title">Lower the Bar for "Capable"</div>
+            <div class="back-hint">&#10005; Close</div>
+          </div>
+          <div class="back-body">
+            <div class="back-video-col">
+              <div class="video-mock">
+                <div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="video-label">Highlight reel — Prompting struggles</div>
+              </div>
+            </div>
+            <div class="back-quotes-col">
+              <div class="back-quotes">
+                <div class="back-quotes-label">Supporting evidence</div>
+                <div class="back-quote">"It's way easier for me to just find the template and then add the colors myself than it is to prompt."<span class="q-source">— P1, choosing manual over AI generation</span></div>
+                <div class="back-quote">"The prompt needs to be perfect. It takes certain irritation."<span class="q-source">— UT-P7/P8, on why they stopped trying AI</span></div>
+                <div class="back-quote">"I didn't even know Canva had AI features. Where is it?"<span class="q-source">— UT-P10, discovering AI for the first time</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: Position AI as Easier -->
+    <div class="card-wrapper c5" data-card="4">
+      <div class="card-inner">
+        <div class="card-front">
+          <div class="rec-header"><div class="rec-num">5</div><div class="rec-where">End of Session<br>Polish &amp; finishing</div></div>
+          <div class="rec-title">Position AI as Easier, Not More Powerful</div>
+          <div class="rec-desc">Don't position AI as powerful — position it as easier. End of session, Canva has context about what's been built. Suggest finishing touches: "add flourishes," "tidy alignment," "spell check." Users see AI as one intelligent system — lean into that.</div>
+          <div class="rec-evidence">"Going with what you know and the path of least resistance." — P4</div>
+          <div class="reach-row">
+            <div class="reach-bar"><div class="reach-fill" style="width:50%;background:#34d399;"></div></div>
+            <span class="reach-text" style="color:#34d399;">8 of 16</span>
+            <span class="reach-detail">P1, P3, P4, P5 + UT-P1, P6, P7/P8, P12</span>
+          </div>
+        </div>
+        <div class="card-back">
+          <div class="back-header">
+            <div class="rec-num">5</div>
+            <div class="back-title">Position AI as Easier</div>
+            <div class="back-hint">&#10005; Close</div>
+          </div>
+          <div class="back-body">
+            <div class="back-video-col">
+              <div class="video-mock">
+                <div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="video-label">Highlight reel — Path of least resistance</div>
+              </div>
+            </div>
+            <div class="back-quotes-col">
+              <div class="back-quotes">
+                <div class="back-quotes-label">Supporting evidence</div>
+                <div class="back-quote">"It's almost like going with what you know and going with the path of least resistance."<span class="q-source">— P4, on why manual wins by default</span></div>
+                <div class="back-quote">"I don't use this function a lot because for a matter of speed… it's more convenient to just scroll."<span class="q-source">— UT-P6, choosing speed over AI</span></div>
+                <div class="back-quote">"If it could just tidy everything up at the end — align things, fix spacing — that'd save me so much time."<span class="q-source">— P1, on what AI should do at the end</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const W=1000,H=120,bl=H-4,mH=H-12;
+const phases=[
+  {x1:0,x2:.10,pk:.45,c:'#f472b6'},
+  {x1:.10,x2:.26,pk:.22,c:'#c084fc'},
+  {x1:.26,x2:.50,pk:.12,c:'#fbbf24'},
+  {x1:.50,x2:.78,pk:.65,c:'#60a5fa'},
+  {x1:.78,x2:.92,pk:.30,c:'#34d399'},
+  {x1:.92,x2:1,pk:.08,c:'rgba(148,163,184,0.1)'}
+];
+function sI(t){
+  let totalV=0.03,bestC='rgba(148,163,184,0.1)',bestW=0;
+  for(const s of phases){
+    const c=(s.x1+s.x2)/2,h=(s.x2-s.x1)/2,n=(t-c)/h;
+    const w=Math.exp(-1.8*n*n);
+    totalV+=s.pk*w;
+    if(w>bestW){bestW=w;bestC=s.c;}
+  }
+  return{v:Math.min(totalV,1),c:bestC};
+}
+function pC(c){if(c.startsWith('#')){const h=c.slice(1);return{r:parseInt(h.substring(0,2),16),g:parseInt(h.substring(2,4),16),b:parseInt(h.substring(4,6),16),a:1};}const m=c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);if(m)return{r:+m[1],g:+m[2],b:+m[3],a:m[4]!=null?+m[4]:1};return{r:148,g:163,b:184,a:.15};}
+
+const svg=document.getElementById('landscape');
+let defs='',pathsSVG='';
+phases.forEach((s,si)=>{
+  const pc=pC(s.c),gid=`g${si}`;
+  defs+=`<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgb(${pc.r},${pc.g},${pc.b})" stop-opacity="${pc.a*.85}"/><stop offset="50%" stop-color="rgb(${pc.r},${pc.g},${pc.b})" stop-opacity="${pc.a*.5}"/><stop offset="100%" stop-color="rgb(${pc.r},${pc.g},${pc.b})" stop-opacity="${pc.a*.08}"/></linearGradient>`;
+  const sx=Math.floor(s.x1*W),ex=Math.ceil(s.x2*W);
+  let d=`M${sx},${bl}`;
+  for(let x=sx;x<=ex;x++){const{v}=sI(x/W);d+=`L${x},${(bl-Math.max(2,v*mH)).toFixed(1)}`;}
+  d+=`L${ex},${bl}Z`;pathsSVG+=`<path d="${d}" fill="url(#${gid})"/>`;
+});
+let ridge=`M0,${(bl-Math.max(2,sI(0).v*mH)).toFixed(1)}`;
+for(let x=1;x<=W;x++)ridge+=`L${x},${(bl-Math.max(2,sI(x/W).v*mH)).toFixed(1)}`;
+let rg='<linearGradient id="rg" x1="0" y1="0" x2="1" y2="0">';
+phases.forEach(s=>{const pc=pC(s.c);rg+=`<stop offset="${s.x1}" stop-color="rgba(${pc.r},${pc.g},${pc.b},0.9)"/><stop offset="${s.x2}" stop-color="rgba(${pc.r},${pc.g},${pc.b},0.9)"/>`;});
+rg+='</linearGradient>';
+
+const markers=[
+  {x:.05,c:'#f472b6',n:'1'},
+  {x:.18,c:'#c084fc',n:'2'},
+  {x:.38,c:'#fbbf24',n:'3'},
+  {x:.64,c:'#60a5fa',n:'4'},
+  {x:.85,c:'#34d399',n:'5'}
+];
+let mSVG='';
+markers.forEach((m,i)=>{
+  const px=m.x*W,{v}=sI(m.x),py=bl-Math.max(2,v*mH);
+  mSVG+=`<circle class="marker-dot" data-idx="${i}" cx="${px}" cy="${py}" r="5" fill="${m.c}" stroke="#0f0f1a" stroke-width="2"/>`;
+  mSVG+=`<circle class="marker-ring" data-idx="${i}" cx="${px}" cy="${py}" r="5" fill="none" stroke="${m.c}" stroke-width="0" opacity="0"/>`;
+});
+
+svg.innerHTML=`<defs>${defs}${rg}<filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${pathsSVG}<path d="${ridge}" fill="none" stroke="url(#rg)" stroke-width="2"/><line x1="0" y1="${bl}" x2="${W}" y2="${bl}" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" stroke-dasharray="4,6"/>${mSVG}<line id="cursor-line" x1="0" y1="0" x2="0" y2="${bl}" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" stroke-dasharray="3,4" visibility="hidden"/><circle id="cursor-dot" cx="0" cy="0" r="5" fill="#fff" filter="url(#glow)" visibility="hidden"><animate attributeName="r" values="4;7;4" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.4;0.9" dur="1.6s" repeatCount="indefinite"/></circle>`;
+
+const cursorDot=document.getElementById('cursor-dot');
+const cursorLine=document.getElementById('cursor-line');
+const wrappers=document.querySelectorAll('.card-wrapper');
+const markerDots=document.querySelectorAll('.marker-dot');
+const markerRings=document.querySelectorAll('.marker-ring');
+
+const zones=[
+  {x1:0,x2:.10,idx:0,c:'#f472b6'},
+  {x1:.10,x2:.26,idx:1,c:'#c084fc'},
+  {x1:.26,x2:.50,idx:2,c:'#fbbf24'},
+  {x1:.50,x2:.78,idx:3,c:'#60a5fa'},
+  {x1:.78,x2:1,idx:4,c:'#34d399'}
+];
+
+function getZone(nx){for(const z of zones)if(nx>=z.x1&&nx<z.x2)return z;return null;}
+
+svg.addEventListener('mousemove',e=>{
+  const rect=svg.getBoundingClientRect();
+  const nx=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+  const svgX=nx*W;
+  const{v}=sI(nx);
+  const svgY=bl-Math.max(2,v*mH);
+  const zone=getZone(nx);
+  const dotColor=zone?zone.c:'#fff';
+
+  cursorDot.setAttribute('cx',svgX);
+  cursorDot.setAttribute('cy',svgY);
+  cursorDot.setAttribute('fill',dotColor);
+  cursorDot.setAttribute('visibility','visible');
+  cursorLine.setAttribute('x1',svgX);
+  cursorLine.setAttribute('x2',svgX);
+  cursorLine.setAttribute('y2',bl);
+  cursorLine.setAttribute('y1',svgY);
+  cursorLine.setAttribute('visibility','visible');
+
+  if(!activeFlip){
+    wrappers.forEach((w,i)=>{
+      if(zone&&zone.idx===i){w.classList.add('highlight');}
+      else{w.classList.remove('highlight');}
+    });
+  }
+});
+
+svg.addEventListener('mouseleave',()=>{
+  cursorDot.setAttribute('visibility','hidden');
+  cursorLine.setAttribute('visibility','hidden');
+  if(!activeFlip){wrappers.forEach(w=>w.classList.remove('highlight'));}
+});
+
+let activeFlip=null;
+
+function highlightMarker(idx){
+  markerDots.forEach((d,i)=>{
+    if(i===idx){d.setAttribute('r','7');d.setAttribute('stroke-width','3');}
+    else{d.setAttribute('r','5');d.setAttribute('stroke-width','2');d.setAttribute('opacity','0.3');}
+  });
+  markerRings.forEach((r,i)=>{
+    if(i===idx){
+      r.setAttribute('stroke-width','2');r.setAttribute('opacity','1');
+      r.innerHTML=`<animate attributeName="r" values="7;14;7" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0;0.8" dur="1.5s" repeatCount="indefinite"/>`;
+    } else {
+      r.setAttribute('stroke-width','0');r.setAttribute('opacity','0');r.innerHTML='';
+    }
+  });
+}
+
+function clearMarkerHighlight(){
+  markerDots.forEach(d=>{d.setAttribute('r','5');d.setAttribute('stroke-width','2');d.setAttribute('opacity','1');});
+  markerRings.forEach(r=>{r.setAttribute('stroke-width','0');r.setAttribute('opacity','0');r.innerHTML='';});
+}
+
+const cardsContainer=document.querySelector('.rec-cards');
+let busy=false;
+
+function fadeSwap(applyFn){
+  if(busy)return;
+  busy=true;
+  cardsContainer.classList.add('fade-out');
+  setTimeout(()=>{
+    applyFn();
+    requestAnimationFrame(()=>{
+      cardsContainer.classList.remove('fade-out');
+      setTimeout(()=>{busy=false;},220);
+    });
+  },220);
+}
+
+function expandCard(i){
+  fadeSwap(()=>{
+    if(activeFlip!==null)wrappers[activeFlip].classList.remove('expanded');
+    wrappers.forEach((ow,oi)=>{
+      ow.classList.remove('highlight','collapsed');
+      if(oi!==i)ow.classList.add('collapsed');
+    });
+    wrappers[i].classList.add('expanded');
+    activeFlip=i;
+    highlightMarker(i);
+  });
+}
+
+function collapseCard(){
+  fadeSwap(()=>{
+    if(activeFlip!==null){
+      const vid=wrappers[activeFlip].querySelector('video');
+      if(vid)vid.pause();
+      wrappers[activeFlip].classList.remove('expanded');
+    }
+    wrappers.forEach(ow=>ow.classList.remove('collapsed'));
+    activeFlip=null;
+    clearMarkerHighlight();
+  });
+}
+
+wrappers.forEach((w,i)=>{
+  w.addEventListener('click',(e)=>{
+    if(e.target.closest('video,.video-real'))return;
+    if(e.target.closest('.back-hint')){collapseCard();return;}
+    if(activeFlip===i){collapseCard();return;}
+    expandCard(i);
+  });
+});
+</script>
+</body>
+</html>
