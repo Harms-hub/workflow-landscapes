@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Workflow Landscapes — Behavioral Overlays</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;user-select:none;background:#0f0f1a;color:#e2e8f0;}
+
+  .tab-bar{display:flex;gap:4px;padding:16px 40px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+  .tab{padding:10px 22px;border-radius:8px 8px 0 0;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:#64748b;transition:all .15s;border-bottom:2px solid transparent;}
+  .tab:hover{color:#94a3b8;background:rgba(255,255,255,0.03);}
+  .tab.active{color:#fff;border-bottom-color:#a78bfa;background:rgba(255,255,255,0.04);}
+
+  .page{display:none;padding:20px 40px 40px;min-width:900px;}
+  .page.active{display:block;}
+
+  .legend{display:flex;gap:18px;margin:8px 0 6px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:7px;font-size:11px;color:#94a3b8;}
+  .legend-swatch{width:18px;height:7px;border-radius:3px;}
+
+  .dim-legend{display:flex;gap:6px;margin:6px 0 10px;flex-wrap:wrap;align-items:center;}
+  .dim-toggle{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);transition:all .15s;user-select:none;}
+  .dim-toggle:hover{border-color:rgba(255,255,255,0.2);}
+  .dim-toggle.active{border-width:2px;}
+  .dim-dot{width:10px;height:10px;border-radius:50%;}
+
+  .instructions{font-size:11px;margin-bottom:16px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);display:inline-block;color:#475569;background:rgba(255,255,255,0.03);}
+  .instructions strong{color:#64748b;}
+
+  .rec-panel{max-height:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease,margin .25s ease;opacity:0;margin-bottom:0;}
+  .rec-panel.open{max-height:400px;opacity:1;margin-bottom:14px;}
+  .rec-card{border-radius:10px;padding:14px 18px;border-left:3px solid;}
+  .rec-card h4{font-size:13px;font-weight:700;margin-bottom:5px;color:#fff;}
+  .rec-card p{font-size:11px;line-height:1.6;color:#cbd5e1;}
+  .rec-card .evidence{margin-top:8px;padding:8px 10px;border-radius:6px;font-size:10px;font-style:italic;line-height:1.5;}
+  .rec-card .rec-stat{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:block;}
+
+  .participant-row{position:relative;margin-bottom:7px;border-radius:12px;padding:9px 20px 5px;border:1px solid rgba(255,255,255,0.05);cursor:grab;transition:all .2s;background:rgba(255,255,255,0.02);}
+  .participant-row:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);}
+  .participant-row.dragging{opacity:.9;transform:scale(1.01);z-index:100;cursor:grabbing;box-shadow:0 8px 32px rgba(0,0,0,0.5);border-color:rgba(255,255,255,0.2);}
+  .participant-row.hidden-row{max-height:0;opacity:0;padding:0 20px;margin-bottom:0;border-color:transparent;overflow:hidden;pointer-events:none;}
+  .drag-over-above{border-top:2px solid #a78bfa !important;}
+  .drag-over-below{border-bottom:2px solid #a78bfa !important;}
+  .row-header{display:flex;align-items:baseline;gap:8px;}
+  .drag-handle{font-size:14px;cursor:grab;margin-right:2px;color:#334155;transition:color .15s;}
+  .participant-row:hover .drag-handle{color:#64748b;}
+  .pid{font-size:13px;font-weight:700;color:#fff;}
+  .prole{font-size:10px;color:#64748b;}
+  .ppattern{margin-left:auto;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:8px;white-space:nowrap;}
+  .chart-area{position:relative;height:64px;margin-top:3px;}
+  .chart-area svg{display:block;width:100%;height:64px;}
+  .phase-labels{position:relative;height:18px;margin-top:1px;}
+  .phase-label{position:absolute;font-size:8px;text-align:center;transform:translateX(-50%);line-height:1.3;white-space:nowrap;color:#475569;transition:color .15s;}
+  .phase-label:hover{color:#e2e8f0 !important;}
+  .phase-label.ai-label{color:#c4b5fd !important;font-weight:600;}
+  .phase-label.ext-label{color:#f9a8d4 !important;font-weight:600;}
+  .phase-label.elem-label{color:#6ee7b7 !important;font-weight:600;}
+  .phase-label.ask-label{color:#93c5fd !important;font-weight:600;}
+  .phase-label.has-quote{cursor:pointer;}
+  .phase-label.has-quote:hover{text-decoration:underline;text-underline-offset:2px;}
+
+  .zone-overlay{position:absolute;top:0;height:100%;border-radius:4px;pointer-events:none;z-index:2;transition:opacity .25s;opacity:0;}
+  .zone-overlay.visible{opacity:1;}
+
+  #cursor-dot{position:fixed;width:12px;height:12px;border-radius:50%;pointer-events:none;z-index:500;opacity:0;transition:opacity .12s;transform:translate(-50%,-50%);}
+  #cursor-dot.visible{opacity:1;}
+  #cursor-dot::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:inherit;opacity:.3;animation:dp 1.4s ease-in-out infinite;}
+  #cursor-dot::after{content:'';position:absolute;inset:-9px;border-radius:50%;background:inherit;opacity:.12;animation:dp 1.4s ease-in-out infinite .2s;}
+  @keyframes dp{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.5);opacity:.08}}
+  #cursor-line{position:fixed;width:1px;pointer-events:none;z-index:499;opacity:0;transition:opacity .12s;}
+  #cursor-line.visible{opacity:.25;}
+  #quote-tooltip{position:fixed;max-width:320px;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);pointer-events:auto;opacity:0;transition:opacity .15s;z-index:1000;font-size:12px;line-height:1.5;display:none;background:#1e1e2e;}
+  #quote-tooltip.visible{opacity:1;display:block;}
+  .tooltip-close{position:absolute;top:6px;right:8px;font-size:14px;cursor:pointer;opacity:.4;transition:opacity .15s;background:none;border:none;padding:2px 4px;line-height:1;color:#e2e8f0;}
+  .tooltip-close:hover{opacity:1;}
+  .tooltip-step{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;padding-right:16px;}
+  .tooltip-quote{font-style:italic;display:block;color:#e2e8f0;}
+  .tooltip-quote::before{content:'\201C';color:#a78bfa;font-size:15px;margin-right:2px;}
+  .tooltip-quote::after{content:'\201D';color:#a78bfa;font-size:15px;margin-left:2px;}
+  .tooltip-pid{font-size:10px;margin-top:6px;display:block;color:#64748b;}
+</style>
+</head>
+<body>
+<div id="cursor-dot"></div>
+<div id="cursor-line"></div>
+<div id="quote-tooltip">
+  <button class="tooltip-close">&times;</button>
+  <span class="tooltip-step"></span>
+  <span class="tooltip-quote"></span>
+  <span class="tooltip-pid"></span>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" data-tab="comb">COM-B Model</button>
+  <button class="tab" data-tab="east">EAST Framework</button>
+  <button class="tab" data-tab="kahneman">System 1 / System 2</button>
+</div>
+
+<!-- ══════ COM-B TAB ══════ -->
+<div class="page active" id="page-comb">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#a78bfa,#c4b5fd);"></div>Canva AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#34d399,#6ee7b7);"></div>AI in Elements</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#60a5fa,#93c5fd);"></div>Ask Canva / Magic Write</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#f472b6,#f9a8d4);"></div>External AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:rgba(148,163,184,0.2);"></div>Manual / Search</div>
+  </div>
+  <div class="dim-legend" id="comb-toggles">
+    <span style="font-size:11px;color:#64748b;margin-right:4px;">Toggle COM-B:</span>
+    <div class="dim-toggle" data-fw="comb" data-dim="C"><div class="dim-dot" style="background:#60a5fa;"></div><span style="color:#60a5fa;">Capability</span></div>
+    <div class="dim-toggle" data-fw="comb" data-dim="O"><div class="dim-dot" style="background:#fbbf24;"></div><span style="color:#fbbf24;">Opportunity</span></div>
+    <div class="dim-toggle" data-fw="comb" data-dim="M"><div class="dim-dot" style="background:#fb7185;"></div><span style="color:#fb7185;">Motivation</span></div>
+  </div>
+
+  <div class="rec-panel" id="rec-comb-C">
+    <div class="rec-card" style="border-color:#60a5fa;background:rgba(96,165,250,0.06);">
+      <span class="rec-stat" style="color:#60a5fa;">Capability — What this means for Canva</span>
+      <h4>Reduce what "capable" needs to mean</h4>
+      <p>6 of 7 participants could search and use templates effortlessly, but struggled with AI prompting. Only P7 found prompting natural. The gap isn't awareness — it's the effort of translating intent into a text prompt. Provide pre-built prompts, contextual suggestions, and "refine this" buttons that require zero writing skill.</p>
+      <div class="evidence" style="background:rgba(96,165,250,0.08);color:#93c5fd;">P1: "It's way easier for me to just find the template and then add the colors myself than it is to prompt." | P6: "I tried to format it into the slide with bullet points. And it cannot do that."</div>
+    </div>
+  </div>
+  <div class="rec-panel" id="rec-comb-O">
+    <div class="rec-card" style="border-color:#fbbf24;background:rgba(251,191,36,0.06);">
+      <span class="rec-stat" style="color:#fbbf24;">Opportunity — What this means for Canva</span>
+      <h4>Fill the manual valley &amp; own the pre-Canva phase</h4>
+      <p>The middle 30% of every workflow has zero AI presence — users default to manual not by choice but because AI doesn't surface there. Meanwhile, 3 of 7 participants start in ChatGPT or Gemini before even opening Canva. Two interventions: (1) lightweight contextual AI assists during manual work, and (2) an AI-powered planning step at project creation to capture the ideation phase.</p>
+      <div class="evidence" style="background:rgba(251,191,36,0.08);color:#fde68a;">P2: "In the middle, assuming I can do most things on my own without AI… I use it less." — not "don't need" but "AI doesn't offer." | P6: "I need you to make this more fun… put a spin on this" — said to ChatGPT, not Canva.</div>
+    </div>
+  </div>
+  <div class="rec-panel" id="rec-comb-M">
+    <div class="rec-card" style="border-color:#fb7185;background:rgba(251,113,133,0.06);">
+      <span class="rec-stat" style="color:#fb7185;">Motivation — What this means for Canva</span>
+      <h4>Reframe AI as the easier path, not the more powerful one</h4>
+      <p>Users who resist AI aren't unaware of its power — they perceive it as more effort than the manual alternative. P4 avoids AI across 70% of her workflow. P3 only generates when search fails. P5 wants "human touch." Target moments where AI is genuinely less work than manual, and make that comparison obvious in the UI.</p>
+      <div class="evidence" style="background:rgba(251,113,133,0.08);color:#fda4af;">P4: "It's almost like going with what you know and going with the path of least resistance." — Make AI be the path of least resistance. | P3: "I don't like using AI if I don't have to because of the sustainability issues."</div>
+    </div>
+  </div>
+
+  <div class="instructions"><strong>↕ Drag rows</strong> to reorder | <strong>Click steps</strong> for quotes | <strong>Toggle dimensions</strong> to filter participants &amp; overlay zones</div>
+  <div id="comb-container"></div>
+</div>
+
+<!-- ══════ EAST TAB ══════ -->
+<div class="page" id="page-east">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#a78bfa,#c4b5fd);"></div>Canva AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#34d399,#6ee7b7);"></div>AI in Elements</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#60a5fa,#93c5fd);"></div>Ask Canva / Magic Write</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#f472b6,#f9a8d4);"></div>External AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:rgba(148,163,184,0.2);"></div>Manual / Search</div>
+  </div>
+  <div class="dim-legend" id="east-toggles">
+    <span style="font-size:11px;color:#64748b;margin-right:4px;">Toggle EAST:</span>
+    <div class="dim-toggle" data-fw="east" data-dim="E"><div class="dim-dot" style="background:#34d399;"></div><span style="color:#34d399;">Easy</span></div>
+    <div class="dim-toggle" data-fw="east" data-dim="A"><div class="dim-dot" style="background:#a78bfa;"></div><span style="color:#a78bfa;">Attractive</span></div>
+    <div class="dim-toggle" data-fw="east" data-dim="S"><div class="dim-dot" style="background:#60a5fa;"></div><span style="color:#60a5fa;">Social</span></div>
+    <div class="dim-toggle" data-fw="east" data-dim="T"><div class="dim-dot" style="background:#fb923c;"></div><span style="color:#fb923c;">Timely</span></div>
+  </div>
+
+  <div class="rec-panel" id="rec-east-E">
+    <div class="rec-card" style="border-color:#34d399;background:rgba(52,211,153,0.06);">
+      <span class="rec-stat" style="color:#34d399;">Easy — What this means for Canva</span>
+      <h4>Collapse search-to-generate into one action</h4>
+      <p>P3's workflow: search → find nothing → switch to generate. That's a 3-step decision. When search results are weak, show "Generate this instead" pre-populated with the search query. One click, zero prompting. For P7 prompting is already effortless — study what makes it natural for him and replicate that simplicity for others.</p>
+      <div class="evidence" style="background:rgba(52,211,153,0.08);color:#6ee7b7;">P3: "There's no options that have anything like what I'd be looking for. So that's where I'd go to generate." — Make that transition instant. | P1: "It's way easier for me to just find the template and then add the colors myself than it is to prompt."</div>
+    </div>
+  </div>
+  <div class="rec-panel" id="rec-east-A">
+    <div class="rec-card" style="border-color:#a78bfa;background:rgba(167,139,250,0.06);">
+      <span class="rec-stat" style="color:#a78bfa;">Attractive — What this means for Canva</span>
+      <h4>Show, don't ask — preview AI outputs before prompting</h4>
+      <p>Instead of a blank prompt field, show previews of what AI could generate based on the current design context. P2 valued creative outputs beyond the library. P6 found Magic Media attractive when it worked. But P4 found AI output quality uncertain and unattractive. Reduce uncertainty by showing before asking.</p>
+      <div class="evidence" style="background:rgba(167,139,250,0.08);color:#c4b5fd;">P2: "If there's something really creative or gimmicky… I'll probably try and have AI specifically generate it." | P4: "I would use AI as like a last resort" — uncertain quality makes it unattractive.</div>
+    </div>
+  </div>
+  <div class="rec-panel" id="rec-east-S">
+    <div class="rec-card" style="border-color:#60a5fa;background:rgba(96,165,250,0.06);">
+      <span class="rec-stat" style="color:#60a5fa;">Social — What this means for Canva</span>
+      <h4>Introduce social proof to normalise AI usage</h4>
+      <p>Completely absent. No participant referenced what others created with AI. Zero social proof in the current experience. Surface community AI creations, show usage stats ("12K presentations used this AI feature this month"), and blend AI-generated templates alongside human-created ones. P4's "path of least resistance" mindset would soften if she saw peers using AI successfully.</p>
+      <div class="evidence" style="background:rgba(96,165,250,0.08);color:#93c5fd;">No participant quoted peer behaviour or community examples. Social is the only EAST dimension with zero coverage across all 7 workflows — making it potentially the highest-leverage intervention.</div>
+    </div>
+  </div>
+  <div class="rec-panel" id="rec-east-T">
+    <div class="rec-card" style="border-color:#fb923c;background:rgba(251,146,60,0.06);">
+      <span class="rec-stat" style="color:#fb923c;">Timely — What this means for Canva</span>
+      <h4>Two timing interventions: before the editor and during the valley</h4>
+      <p><strong>Before:</strong> Catch users at project creation with "What are you making? Let AI help you plan." Claims the ChatGPT/Gemini phase. <strong>During:</strong> Surface micro-assists in the manual middle — layout suggestions, colour harmonisation — when users are in flow but fatigued. AI works at workflow edges but is absent during the manual valley.</p>
+      <div class="evidence" style="background:rgba(251,146,60,0.08);color:#fdba74;">P6 uses ChatGPT for ideation before Canva. P2's valley is manual by default, not by choice. P1's AI usage only starts at step 4 of 6 — a timing miss for the first 55% of her workflow.</div>
+    </div>
+  </div>
+
+  <div class="instructions"><strong>↕ Drag rows</strong> to reorder | <strong>Click steps</strong> for quotes | <strong>Toggle dimensions</strong> to filter participants &amp; overlay zones</div>
+  <div id="east-container"></div>
+</div>
+
+<!-- ══════ KAHNEMAN TAB ══════ -->
+<div class="page" id="page-kahneman">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#a78bfa,#c4b5fd);"></div>Canva AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#34d399,#6ee7b7);"></div>AI in Elements</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#60a5fa,#93c5fd);"></div>Ask Canva / Magic Write</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#f472b6,#f9a8d4);"></div>External AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:rgba(148,163,184,0.2);"></div>Manual / Search</div>
+  </div>
+  <div class="dim-legend" id="kahneman-toggles">
+    <span style="font-size:11px;color:#64748b;margin-right:4px;">Toggle System:</span>
+    <div class="dim-toggle" data-fw="kahneman" data-dim="S1"><div class="dim-dot" style="background:#60a5fa;"></div><span style="color:#60a5fa;">System 1 — Fast &amp; Automatic</span></div>
+    <div class="dim-toggle" data-fw="kahneman" data-dim="S2"><div class="dim-dot" style="background:#f87171;"></div><span style="color:#f87171;">System 2 — Slow &amp; Deliberate</span></div>
+  </div>
+
+  <div class="rec-panel" id="rec-kahneman-S1">
+    <div class="rec-card" style="border-color:#60a5fa;background:rgba(96,165,250,0.06);">
+      <span class="rec-stat" style="color:#60a5fa;">System 1 — What this means for Canva</span>
+      <h4>Blend AI results into the existing search flow</h4>
+      <p>Search, template selection, manual customisation, and library browsing are all System 1 for every participant. They feel like flow. When P1 searches templates and scrolls, an AI-generated option appearing in that same grid — not in a separate tab, not behind a prompt field — would be System 1 compatible. The user doesn't have to decide to "use AI." It just appears. P7 is the north star: AI is his System 1. He's done it enough that prompting is automatic.</p>
+      <div class="evidence" style="background:rgba(96,165,250,0.08);color:#93c5fd;">P1: "The best thing about Canva is the templates… there's a lot of variability." — AI should add to that variability, invisibly. | P7: "I directly jump and use AI because with a detailed prompt I can explain exactly what I want… without wasting time."</div>
+    </div>
+  </div>
+  <div class="rec-panel" id="rec-kahneman-S2">
+    <div class="rec-card" style="border-color:#f87171;background:rgba(248,113,113,0.06);">
+      <span class="rec-stat" style="color:#f87171;">System 2 — What this means for Canva</span>
+      <h4>Eliminate the blank prompt field</h4>
+      <p>Every AI interaction (except P7's) requires System 2 activation — slow, deliberate, effortful. A blank text field is peak System 2: it demands users formulate a thought before receiving anything. Replace with contextual suggestions, visual prompt builders, or "make this more vibrant / professional / playful" one-click options that keep users in flow. The moment you ask them to open a side panel and type, you've forced System 2 — and that's where 6 of 7 participants resist.</p>
+      <div class="evidence" style="background:rgba(248,113,113,0.08);color:#fca5a5;">P6: "Something off-putting… is when I need to describe this in more detail." — The prompt field is the friction point. | P2: "In the middle, assuming I can do most things on my own without AI… I use it less." — Not by choice, but by design.</div>
+    </div>
+  </div>
+
+  <div class="instructions"><strong>↕ Drag rows</strong> to reorder | <strong>Click steps</strong> for quotes | <strong>Toggle System 1/2</strong> to see where thinking shifts | <em style="color:#64748b;">Note: P7 disappears from System 2 — AI is automatic for him</em></div>
+  <div id="kahneman-container"></div>
+</div>
+
+<script>
+const P=[
+  {id:'P1',role:'Media Production Agency',pattern:'End-loaded',pc:'#a78bfa',segs:[{x1:0,x2:.13,pk:.08,c:'rgba(148,163,184,0.12)',l:'Search templates',lc:'',q:"The best thing about Canva is the templates\u2026 there\u2019s a lot of variability\u2026 most of them are really, really well done."},{x1:.13,x2:.28,pk:.06,c:'rgba(148,163,184,0.08)',l:'Select pages',lc:'',q:"If I find one or two pages out of the 15 that I like, I will use those as the basic foundation."},{x1:.28,x2:.55,pk:.10,c:'rgba(148,163,184,0.12)',l:'Manual customisation',lc:'',q:"It\u2019s way easier for me to just find the template and then add the colors myself than it is to prompt."},{x1:.55,x2:.72,pk:.55,c:'#60a5fa',l:'Magic Write',lc:'ask-label',q:"I would go into Magic Write\u2026 ask it to write an intro, and then once it generates an intro that I\u2019m okay with, I go in and edit it."},{x1:.72,x2:.88,pk:.72,c:'#34d399',l:'Generate in Elements',lc:'elem-label',q:"90% of generating, to me, is for flourishes and final touches. It\u2019s not for the overarching theme."},{x1:.88,x2:1,pk:.10,c:'rgba(148,163,184,0.12)',l:'Manual polish',lc:'',q:"I would take this file and edit it myself\u2026 add effects, a drop shadow, a neon glow."}]},
+  {id:'P2',role:'Marketing Agency + Nonprofit',pattern:'Barbell',pc:'#60a5fa',segs:[{x1:0,x2:.08,pk:.08,c:'rgba(148,163,184,0.12)',l:'Search',lc:'',q:"For the layout of a slideshow, I don\u2019t need anything that AI has to generate."},{x1:.08,x2:.26,pk:.82,c:'#34d399',l:'Generate niche visuals',lc:'elem-label',q:"If there\u2019s something really creative or gimmicky\u2026 I\u2019ll probably try and have AI specifically generate it."},{x1:.26,x2:.42,pk:.68,c:'#a78bfa',l:'Edit with Canva AI',lc:'ai-label',q:"If it\u2019s close and I can give it a little more information to get it to the end, then that\u2019s good to interact with it."},{x1:.42,x2:.64,pk:.07,c:'rgba(148,163,184,0.08)',l:'Manual middle work',lc:'',q:"In the middle, assuming I can do most things on my own without AI\u2026 I use it less."},{x1:.64,x2:.84,pk:.75,c:'#a78bfa',l:'AI polish & effects',lc:'ai-label',q:"At the end, when I\u2019m trying to touch things up and create these little specific things, I probably use it more."},{x1:.84,x2:1,pk:.08,c:'rgba(148,163,184,0.08)',l:'Final check',lc:'',q:"I would copy this element, bring it over here, paste it\u2026 and figure out the way to position it best."}]},
+  {id:'P3',role:'Content Advisor \u00b7 Mining + Freelance',pattern:'Search-first, AI fallback',pc:'#f472b6',segs:[{x1:0,x2:.18,pk:.85,c:'#f472b6',l:'External LLM',lc:'ext-label',q:"Having that written list sorted before you start to do any of the visuals for the presentation."},{x1:.18,x2:.40,pk:.08,c:'rgba(148,163,184,0.12)',l:'Search stock',lc:'',q:"My preference is to see what already exists\u2026 I don\u2019t like using AI if I don\u2019t have to because of the sustainability issues."},{x1:.40,x2:.58,pk:.50,c:'#34d399',l:'Generate if fails',lc:'elem-label',q:"There\u2019s no options that have anything like what I\u2019d be looking for. So that\u2019s where I\u2019d go to generate."},{x1:.58,x2:.74,pk:.08,c:'rgba(148,163,184,0.08)',l:'Background removal',lc:'',q:"I remove backgrounds and create composites\u2026 it\u2019s about realizing the vision rather than just relying on AI."},{x1:.74,x2:.88,pk:.35,c:'#60a5fa',l:'Magic Extend',lc:'ask-label',q:"I\u2019d go into edit and try magic extend\u2026 to magically fill out the background."},{x1:.88,x2:1,pk:.06,c:'rgba(148,163,184,0.08)',l:'Fix artefacts',lc:'',q:"Sometimes I\u2019ll go in with the manual eraser and remove or add back in parts that it\u2019s got wrong."}]},
+  {id:'P4',role:'Corporate Comms \u00b7 Comcast',pattern:'Last resort',pc:'#f87171',segs:[{x1:0,x2:.24,pk:.06,c:'rgba(148,163,184,0.10)',l:'Duplicate past project',lc:'',q:"I can dupe a previous presentation\u2026 just do a carbon copy of what we did for Compliance Week."},{x1:.24,x2:.48,pk:.08,c:'rgba(148,163,184,0.12)',l:'Search brand library',lc:'',q:"I go searching for stuff first. Is there an existing cartoon picture or an actual photo of this?"},{x1:.48,x2:.70,pk:.07,c:'rgba(148,163,184,0.10)',l:'Manual layout',lc:'',q:"I would just start editing\u2026 adding text, using our font\u2026 pulling logos."},{x1:.70,x2:.84,pk:.22,c:'#34d399',l:'Generate (reluctantly)',lc:'elem-label',q:"I would use AI as like a last resort where I\u2019m like, okay, that\u2019s kind of as far as I\u2019m gonna go."},{x1:.84,x2:1,pk:.06,c:'rgba(148,163,184,0.08)',l:'Manual workarounds',lc:'',q:"It\u2019s almost like going with what you know and going with the path of least resistance."}]},
+  {id:'P5',role:'Digital Marketing \u00b7 Italy',pattern:'Surgical',pc:'#34d399',segs:[{x1:0,x2:.16,pk:.60,c:'#f472b6',l:'External LLMs',lc:'ext-label',q:"I\u2019m working outside Canva with LLMs and Google Docs to create an outline."},{x1:.16,x2:.32,pk:.08,c:'rgba(148,163,184,0.12)',l:'Select template',lc:'',q:"I never start with a blank page. We always start with a template\u2026 I\u2019m not a designer."},{x1:.32,x2:.48,pk:.08,c:'rgba(148,163,184,0.10)',l:'Manual transposition',lc:'',q:"I want to feel the presentation is being built and add that human touch."},{x1:.48,x2:.64,pk:.48,c:'#60a5fa',l:'Ask Canva: translate',lc:'ask-label',q:"This sentence is too hard for my audience\u2026 Ask Canva will respect the size so the output still looks good."},{x1:.64,x2:.82,pk:.45,c:'#34d399',l:'Generate in Elements',lc:'elem-label',q:"It sometimes happens that I have to create an icon, and I generate it inside Canva directly."},{x1:.82,x2:1,pk:.07,c:'rgba(148,163,184,0.08)',l:'Manual edits',lc:'',q:"I would go inside and edit the content just like I want."}]},
+  {id:'P6',role:'Sales \u00b7 Marketing Agency + Nonprofit',pattern:'External ideation \u2192 execution',pc:'#f472b6',segs:[{x1:0,x2:.10,pk:.08,c:'rgba(148,163,184,0.12)',l:'Search templates',lc:'',q:"It tells me what I should even include in a pitch deck."},{x1:.10,x2:.28,pk:.80,c:'#f472b6',l:'ChatGPT \u2192 Gemini',lc:'ext-label',q:"I need you to make this more fun\u2026 a different vibe\u2026 put a spin on this for the Italian presentation."},{x1:.28,x2:.42,pk:.30,c:'#a78bfa',l:'Ingest (fails)',lc:'ai-label',q:"I tried to format it into the slide with bullet points. And it cannot do that."},{x1:.42,x2:.60,pk:.62,c:'#34d399',l:'Magic Media',lc:'elem-label',q:"Something off-putting and unique is when I need to describe this in more detail."},{x1:.60,x2:.78,pk:.07,c:'rgba(148,163,184,0.08)',l:'Manual brand work',lc:'',q:"I need to make sure it aligns with my brand\u2026 shifting all the colors and fonts."},{x1:.78,x2:1,pk:.42,c:'#a78bfa',l:'AI conversation',lc:'ai-label',q:"Kind of like your precursor history\u2026 I can see the previous prompts that I put in."}]},
+  {id:'P7',role:'Collaborative Design',pattern:'Front-loaded',pc:'#22d3ee',segs:[{x1:0,x2:.26,pk:.92,c:'#a78bfa',l:'Home \u2192 AI base',lc:'ai-label',q:"I directly jump and use AI because with a detailed prompt I can explain exactly what I want\u2026 without wasting time."},{x1:.26,x2:.48,pk:.07,c:'rgba(148,163,184,0.10)',l:'Manual refinement',lc:'',q:"The other stuff I can do without AI. It\u2019s just adding text and changing colors, changing fonts."},{x1:.48,x2:.62,pk:.08,c:'rgba(148,163,184,0.12)',l:'Search Elements',lc:'',q:"I want to add something like a 3D image\u2026 I can just click here and generate it."},{x1:.62,x2:.82,pk:.58,c:'#a78bfa',l:'Edit with Canva AI',lc:'ai-label',q:"I can refine this picture\u2026 I just click on it and write\u2026 change from daylight to nighttime."},{x1:.82,x2:1,pk:.07,c:'rgba(148,163,184,0.08)',l:'Final adjustments',lc:'',q:"No need for AI intervention\u2026 I can do them manually."}]}
+];
+
+const combZones={
+  P1:[{x1:.28,x2:.55,dim:'O',note:'Manual valley \u2014 no AI surfaces here. Users default to manual because nothing prompts them otherwise.'},{x1:.55,x2:.72,dim:'C',note:'Prompting effort \u2014 P1 finds it easier to do things manually than to write a prompt for AI.'}],
+  P2:[{x1:.42,x2:.64,dim:'O',note:'Manual valley \u2014 AI is absent in the middle. P2 works manually here by default, not by choice.'},{x1:.08,x2:.26,dim:'M',note:'Creative motivation \u2014 P2 is motivated to use AI for things that are "really creative or gimmicky."'}],
+  P3:[{x1:0,x2:.18,dim:'O',note:'Pre-Canva gap \u2014 ideation happens in external LLMs because Canva doesn\u2019t offer this at project start.'},{x1:.18,x2:.40,dim:'M',note:'Low motivation \u2014 P3 prefers what already exists and avoids AI due to sustainability concerns.'},{x1:.40,x2:.58,dim:'C',note:'Fallback only \u2014 generation is a last resort when search fails, not a confident first choice.'}],
+  P4:[{x1:0,x2:.70,dim:'M',note:'Avoids AI entirely \u2014 P4 sees manual work as the path of least resistance. AI feels like more effort.'},{x1:.70,x2:.84,dim:'C',note:'Reluctant and unsure \u2014 P4 uses AI only as a last resort and lacks confidence in prompting.'}],
+  P5:[{x1:0,x2:.16,dim:'O',note:'External ideation \u2014 P5 uses LLMs and Google Docs before opening Canva. The planning phase happens elsewhere.'},{x1:.32,x2:.48,dim:'M',note:'Wants human touch \u2014 P5 deliberately avoids AI here to feel the presentation is being "built" personally.'}],
+  P6:[{x1:.10,x2:.28,dim:'O',note:'External AI \u2014 P6 uses ChatGPT and Gemini for ideation and tone because Canva doesn\u2019t support this phase.'},{x1:.28,x2:.42,dim:'C',note:'Ingestion fails \u2014 P6 tried to bring ChatGPT content into Canva slides and it couldn\u2019t format it.'}],
+  P7:[{x1:0,x2:.26,dim:'C',note:'High capability \u2014 P7 is the only participant for whom prompting AI is automatic and effortless.'}]
+};
+const combBg={C:'rgba(96,165,250,0.12)',O:'rgba(251,191,36,0.12)',M:'rgba(251,113,133,0.12)'};
+const combBd={C:'rgba(96,165,250,0.35)',O:'rgba(251,191,36,0.35)',M:'rgba(251,113,133,0.35)'};
+
+const eastZones={
+  P1:[{x1:.28,x2:.55,dim:'T',note:'Timing gap \u2014 no AI surfaces during the manual valley. The first 55% of P1\u2019s workflow has zero AI triggers.'},{x1:.55,x2:.88,dim:'E',note:'Easy \u2014 Magic Write and Generate in Elements are familiar tools P1 uses with confidence.'}],
+  P2:[{x1:.08,x2:.42,dim:'A',note:'Attractive \u2014 P2 values creative, gimmicky outputs that go beyond the stock library.'},{x1:.42,x2:.64,dim:'T',note:'Timing gap \u2014 the manual valley has no AI presence despite P2 being open to it.'},{x1:.64,x2:.84,dim:'E',note:'Easy \u2014 P2 knows exactly what to ask for at the polish stage.'}],
+  P3:[{x1:0,x2:.18,dim:'T',note:'Timing miss \u2014 ideation happens in an external LLM before Canva even opens.'},{x1:.40,x2:.58,dim:'E',note:'Not easy \u2014 generation is a fallback path that requires switching tools and mindsets.'}],
+  P4:[{x1:0,x2:.70,dim:'S',note:'No social proof \u2014 P4 has zero reference points for peers using AI in corporate comms.'},{x1:.70,x2:.84,dim:'A',note:'Not attractive \u2014 P4 is uncertain about AI output quality and finds it risky.'}],
+  P5:[{x1:0,x2:.16,dim:'T',note:'Timing miss \u2014 planning and ideation happen outside Canva in LLMs and Google Docs.'},{x1:.48,x2:.64,dim:'E',note:'Easy \u2014 Ask Canva\u2019s translation respects layout size, making it effortless to use.'}],
+  P6:[{x1:.10,x2:.28,dim:'T',note:'Timing miss \u2014 tone and ideation happen in ChatGPT/Gemini because Canva doesn\u2019t support this.'},{x1:.28,x2:.42,dim:'E',note:'Not easy \u2014 ingestion from external AI into Canva fails. The transition is broken.'},{x1:.42,x2:.60,dim:'A',note:'Attractive \u2014 Magic Media produces outputs P6 finds creative and useful.'}],
+  P7:[{x1:0,x2:.26,dim:'E',note:'Easy \u2014 prompting is natural and automatic for P7. Zero friction.'},{x1:0,x2:.82,dim:'A',note:'Attractive \u2014 AI gives P7 speed and quality that makes it the obvious choice.'}]
+};
+const eastBg={E:'rgba(52,211,153,0.12)',A:'rgba(167,139,250,0.12)',S:'rgba(96,165,250,0.12)',T:'rgba(251,146,60,0.12)'};
+const eastBd={E:'rgba(52,211,153,0.35)',A:'rgba(167,139,250,0.35)',S:'rgba(96,165,250,0.35)',T:'rgba(251,146,60,0.35)'};
+
+const kahnemanZones={
+  P1:[{x1:0,x2:.55,dim:'S1',note:'System 1 \u2014 Search, select, and manual customisation are automatic and effortless for P1. Zero deliberation needed.'},{x1:.55,x2:.88,dim:'S2',note:'System 2 \u2014 Magic Write and Generate in Elements require P1 to shift into deliberate mode: write prompts, evaluate output, decide if it\u2019s good enough.'}],
+  P2:[{x1:.42,x2:.64,dim:'S1',note:'System 1 \u2014 The manual valley is pure flow. P2 adjusts layouts, moves elements, and positions content without thinking about it.'},{x1:.08,x2:.42,dim:'S2',note:'System 2 \u2014 Generating niche visuals and editing with Canva AI requires deliberate prompting and output evaluation.'},{x1:.64,x2:.84,dim:'S2',note:'System 2 \u2014 AI polish at the end also requires conscious decisions about what to refine and how to prompt it.'}],
+  P3:[{x1:.18,x2:.40,dim:'S1',note:'System 1 \u2014 Searching stock is habitual and comfortable. P3 browses the library intuitively.'},{x1:0,x2:.18,dim:'S2',note:'System 2 \u2014 Using an external LLM to create written lists requires deliberate planning and prompt composition.'},{x1:.40,x2:.58,dim:'S2',note:'System 2 \u2014 Generation is a reluctant fallback that requires P3 to switch from browsing (S1) to prompting (S2).'},{x1:.74,x2:.88,dim:'S2',note:'System 2 \u2014 Magic Extend requires evaluating AI output and deciding whether to manually fix artefacts.'}],
+  P4:[{x1:0,x2:.70,dim:'S1',note:'System 1 \u2014 P4\u2019s entire workflow is System 1: duplicate, search, manual layout. She stays in automatic mode as long as possible.'},{x1:.70,x2:.84,dim:'S2',note:'System 2 \u2014 The only S2 moment. Generation feels effortful and uncertain \u2014 P4 uses it reluctantly as a last resort.'}],
+  P5:[{x1:.16,x2:.48,dim:'S1',note:'System 1 \u2014 Template selection and manual transposition are habitual. P5 wants to "feel the presentation being built."'},{x1:0,x2:.16,dim:'S2',note:'System 2 \u2014 External LLM planning is deliberate: creating outlines, structuring content before Canva.'},{x1:.48,x2:.82,dim:'S2',note:'System 2 \u2014 Ask Canva and Generate in Elements require conscious prompting and evaluation of output.'}],
+  P6:[{x1:.60,x2:.78,dim:'S1',note:'System 1 \u2014 Manual brand work is automatic: shifting colors, applying fonts, aligning to brand identity.'},{x1:.10,x2:.60,dim:'S2',note:'System 2 \u2014 Heavy S2 zone: external AI ideation, failed ingestion, and Magic Media prompting all require deliberate effort.'},{x1:.78,x2:1,dim:'S2',note:'System 2 \u2014 AI conversation requires ongoing deliberate interaction with the AI.'}],
+  P7:[{x1:0,x2:.82,dim:'S1',note:'System 1 \u2014 The exception. P7 has made AI prompting automatic through repetition. Even AI base generation and editing are effortless for him. This is the design goal for all users.'}]
+};
+const kahnemanBg={S1:'rgba(96,165,250,0.12)',S2:'rgba(248,113,113,0.12)'};
+const kahnemanBd={S1:'rgba(96,165,250,0.35)',S2:'rgba(248,113,113,0.35)'};
+
+const state={comb:new Set(),east:new Set(),kahneman:new Set()};
+const orders={comb:[...P],east:[...P],kahneman:[...P]};
+
+const cd=document.getElementById('cursor-dot'),cl=document.getElementById('cursor-line'),tt=document.getElementById('quote-tooltip'),tS=tt.querySelector('.tooltip-step'),tQ=tt.querySelector('.tooltip-quote'),tP=tt.querySelector('.tooltip-pid');
+let aL=null;
+
+function showTT(el,l,q,pid,c){tS.textContent=l;tS.style.color=c||'#94a3b8';tQ.textContent=q;tP.textContent='\u2014 '+pid;tt.classList.add('visible');tt.style.left='0';tt.style.top='0';tt.style.display='block';tt.style.opacity='0';requestAnimationFrame(()=>{const tw=tt.offsetWidth,th=tt.offsetHeight,r=el.getBoundingClientRect();let x=r.left+r.width/2-tw/2,y=r.top-th-8;if(x+tw>window.innerWidth-12)x=window.innerWidth-tw-12;if(x<12)x=12;if(y<12)y=r.bottom+8;tt.style.left=x+'px';tt.style.top=y+'px';tt.style.opacity='1';});}
+function hideTT(){tt.classList.remove('visible');tt.style.display='none';aL=null;}
+tt.querySelector('.tooltip-close').addEventListener('click',hideTT);
+document.addEventListener('click',e=>{if(aL&&!tt.contains(e.target)&&e.target!==aL)hideTT();});
+
+function sI(segs,t){for(const s of segs){if(t>=s.x1&&t<s.x2){const c=(s.x1+s.x2)/2,h=(s.x2-s.x1)/2,n=(t-c)/h,b=Math.exp(-3*n*n);return{v:s.pk*b+.03*(1-b),c:s.c};}}return{v:.03,c:'rgba(148,163,184,0.08)'};}
+function pC(c){if(c.startsWith('#')){const h=c.slice(1);return{r:parseInt(h.substring(0,2),16),g:parseInt(h.substring(2,4),16),b:parseInt(h.substring(4,6),16),a:1};}const m=c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);if(m)return{r:+m[1],g:+m[2],b:+m[3],a:m[4]!=null?+m[4]:1};return{r:148,g:163,b:184,a:.08};}
+function sC(s){if(s.lc==='ai-label')return'#c4b5fd';if(s.lc==='elem-label')return'#6ee7b7';if(s.lc==='ask-label')return'#93c5fd';if(s.lc==='ext-label')return'#f9a8d4';return'#94a3b8';}
+
+function buildSVG(segs,pi){
+  const W=800,H=64,bl=H-1,mH=H-6;
+  let df='',pa='';
+  segs.forEach((s,si)=>{
+    const pc=pC(s.c),gid=`g${pi}_${si}`;
+    df+=`<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgb(${pc.r},${pc.g},${pc.b})" stop-opacity="${pc.a*.9}"/><stop offset="40%" stop-color="rgb(${pc.r},${pc.g},${pc.b})" stop-opacity="${pc.a*.65}"/><stop offset="100%" stop-color="rgb(${pc.r},${pc.g},${pc.b})" stop-opacity="${pc.a*.12}"/></linearGradient>`;
+    const sx=Math.floor(s.x1*W),ex=Math.ceil(s.x2*W);
+    let d=`M${sx},${bl}`;
+    for(let x=sx;x<=ex;x++){const{v}=sI(segs,x/W);d+=`L${x},${(bl-Math.max(2,v*mH)).toFixed(1)}`;}
+    d+=`L${ex},${bl}Z`;pa+=`<path d="${d}" fill="url(#${gid})"/>`;
+  });
+  let ri=`M0,${(bl-Math.max(2,sI(segs,0).v*mH)).toFixed(1)}`;
+  for(let x=1;x<=W;x++)ri+=`L${x},${(bl-Math.max(2,sI(segs,x/W).v*mH)).toFixed(1)}`;
+  const rgid=`rg${pi}`;let rg=`<linearGradient id="${rgid}" x1="0" y1="0" x2="1" y2="0">`;
+  segs.forEach(s=>{const pc=pC(s.c);rg+=`<stop offset="${Math.max(0,s.x1)}" stop-color="rgba(${pc.r},${pc.g},${pc.b},0.8)"/><stop offset="${Math.min(1,s.x2)}" stop-color="rgba(${pc.r},${pc.g},${pc.b},0.8)"/>`;});
+  rg+=`</linearGradient>`;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:64px;display:block;"><defs>${df}${rg}</defs>${pa}<path d="${ri}" fill="none" stroke="url(#${rgid})" stroke-width="1.5"/><line x1="0" y1="${bl}" x2="${W}" y2="${bl}" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" stroke-dasharray="4,6"/></svg>`;
+}
+
+const zoneData={comb:combZones,east:eastZones,kahneman:kahnemanZones};
+const bgData={comb:combBg,east:eastBg,kahneman:kahnemanBg};
+const bdData={comb:combBd,east:eastBd,kahneman:kahnemanBd};
+const containerIds={comb:'comb-container',east:'east-container',kahneman:'kahneman-container'};
+
+function hasActiveDim(pid,fw){
+  const dims=state[fw];
+  if(dims.size===0)return true;
+  const zones=zoneData[fw][pid];
+  if(!zones)return false;
+  return zones.some(z=>dims.has(z.dim));
+}
+
+function renderTab(fw){
+  const ctr=document.getElementById(containerIds[fw]);
+  const zoneMap=zoneData[fw];
+  const bgMap=bgData[fw];
+  const bdMap=bdData[fw];
+  const dims=state[fw];
+  const order=orders[fw];
+  ctr.innerHTML='';
+  order.forEach((p,i)=>{
+    const visible=hasActiveDim(p.id,fw);
+    const row=document.createElement('div');
+    row.className='participant-row'+(visible?'':' hidden-row');
+    row.draggable=true;row.dataset.idx=i;row.dataset.fw=fw;
+    row.innerHTML=`<div class="row-header"><span class="drag-handle">\u2807</span><span class="pid">${p.id}</span><span class="prole">${p.role}</span><span class="ppattern" style="background:${p.pc}18;color:${p.pc};border:1px solid ${p.pc}33;">${p.pattern}</span></div><div class="chart-area">${buildSVG(p.segs,fw+i)}</div><div class="phase-labels"></div>`;
+    const chartArea=row.querySelector('.chart-area');
+    const sv=row.querySelector('svg');
+    const zones=zoneMap[p.id];
+    if(zones){
+      zones.forEach(z=>{
+        const zd=document.createElement('div');zd.className='zone-overlay';zd.dataset.dim=z.dim;
+        zd.style.left=`${(z.x1*100).toFixed(1)}%`;zd.style.width=`${((z.x2-z.x1)*100).toFixed(1)}%`;
+        zd.style.background=bgMap[z.dim];zd.style.borderLeft=`2px solid ${bdMap[z.dim]}`;zd.style.borderRight=`2px solid ${bdMap[z.dim]}`;
+        zd.title=z.note;
+        if(dims.has(z.dim))zd.classList.add('visible');
+        chartArea.appendChild(zd);
+      });
+    }
+    sv.addEventListener('mousemove',e=>{
+      const r=sv.getBoundingClientRect(),t=(e.clientX-r.left)/r.width,{v}=sI(p.segs,t);
+      let seg=null;for(const s of p.segs)if(t>=s.x1&&t<s.x2){seg=s;break;}
+      const dy=(r.bottom-1)-Math.max(2,v*(r.height-6)),dc=sC(seg||{lc:''});
+      cd.style.left=e.clientX+'px';cd.style.top=dy+'px';cd.style.background=dc;cd.classList.add('visible');
+      cl.style.left=e.clientX+'px';cl.style.top=r.top+'px';cl.style.height=r.height+'px';cl.style.background=dc;cl.classList.add('visible');
+    });
+    sv.addEventListener('mouseleave',()=>{cd.classList.remove('visible');cl.classList.remove('visible');});
+    const lb=row.querySelector('.phase-labels');
+    p.segs.forEach(s=>{
+      const el=document.createElement('span');el.className=`phase-label ${s.lc}`;
+      el.style.left=`${((s.x1+s.x2)/2*100).toFixed(1)}%`;el.textContent=s.l;
+      if(s.q){el.classList.add('has-quote');el.addEventListener('click',e=>{e.stopPropagation();if(aL===el){hideTT();return;}aL=el;showTT(el,s.l,s.q,p.id+' \u2014 '+p.role,sC(s));});}
+      lb.appendChild(el);
+    });
+    ctr.appendChild(row);
+  });
+  attachDrag(fw);
+}
+
+let dI=null;
+function attachDrag(fw){
+  const rows=document.getElementById(containerIds[fw]).querySelectorAll('.participant-row');
+  rows.forEach(r=>{
+    r.addEventListener('dragstart',e=>{dI=+r.dataset.idx;r.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dI);});
+    r.addEventListener('dragend',()=>{r.classList.remove('dragging');rows.forEach(x=>{x.classList.remove('drag-over-above','drag-over-below');});});
+    r.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';const rc=r.getBoundingClientRect();rows.forEach(x=>{x.classList.remove('drag-over-above','drag-over-below');});if(e.clientY<rc.top+rc.height/2)r.classList.add('drag-over-above');else r.classList.add('drag-over-below');});
+    r.addEventListener('dragleave',()=>{r.classList.remove('drag-over-above','drag-over-below');});
+    r.addEventListener('drop',e=>{e.preventDefault();const ti=+r.dataset.idx;if(dI===null||dI===ti)return;const rc=r.getBoundingClientRect(),before=e.clientY<rc.top+rc.height/2,order=orders[fw],item=order.splice(dI,1)[0];let ni=ti;if(dI<ti)ni--;if(!before)ni++;order.splice(ni,0,item);renderTab(fw);});
+  });
+}
+
+const dimList={comb:['C','O','M'],east:['E','A','S','T'],kahneman:['S1','S2']};
+function updateDimToggle(fw){
+  const dims=state[fw];
+  dimList[fw].forEach(d=>{
+    const panel=document.getElementById('rec-'+fw+'-'+d);
+    if(panel)panel.classList.toggle('open',dims.has(d));
+  });
+  renderTab(fw);
+}
+
+document.querySelectorAll('.dim-toggle').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const fw=btn.dataset.fw,dim=btn.dataset.dim,dims=state[fw];
+    if(dims.has(dim)){dims.delete(dim);btn.classList.remove('active');}
+    else{dims.add(dim);btn.classList.add('active');}
+    updateDimToggle(fw);
+  });
+});
+
+let activeTab='comb';
+document.querySelectorAll('.tab-bar .tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    activeTab=t.dataset.tab;
+    document.querySelectorAll('.tab-bar .tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===activeTab));
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+activeTab));
+    hideTT();
+    renderTab(activeTab);
+  });
+});
+
+renderTab('comb');
+renderTab('east');
+renderTab('kahneman');
+</script>
+</body>
+</html>
