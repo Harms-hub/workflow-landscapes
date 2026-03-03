@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Workflow Landscapes — Moderated vs. UserTesting</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; user-select: none; transition: background 0.3s, color 0.3s; }
+
+  /* Theme: Dark (moderated) */
+  body.theme-dark { background: #0f0f1a; color: #e2e8f0; }
+  .theme-dark .tab-bar { background: #161625; border-color: rgba(255,255,255,0.08); }
+  .theme-dark .tab { color: #64748b; }
+  .theme-dark .tab:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
+  .theme-dark .tab.active { color: #fff; background: rgba(255,255,255,0.08); }
+  .theme-dark h1 { color: #fff; }
+  .theme-dark .subtitle { color: #94a3b8; }
+  .theme-dark .participant-row { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05); }
+  .theme-dark .participant-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
+  .theme-dark .pid { color: #fff; }
+  .theme-dark .prole { color: #64748b; }
+  .theme-dark .drag-handle { color: #334155; }
+  .theme-dark .participant-row:hover .drag-handle { color: #64748b; }
+  .theme-dark .phase-label { color: #475569; }
+  .theme-dark .instructions { color: #475569; background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); }
+  .theme-dark .instructions strong { color: #64748b; }
+  .theme-dark .legend-item { color: #94a3b8; }
+  .theme-dark .summary-card { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); }
+  .theme-dark .summary-card h3 { color: #fff; }
+  .theme-dark .summary-card p { color: #94a3b8; }
+  .theme-dark #quote-tooltip { background: #1e1e2e; border-color: rgba(255,255,255,0.12); }
+  .theme-dark .tooltip-quote { color: #e2e8f0; }
+  .theme-dark .tooltip-pid { color: #64748b; }
+  .theme-dark .study-badge-mod { background: rgba(124,58,237,0.15); color: #a78bfa; border-color: rgba(124,58,237,0.3); }
+  .theme-dark .study-badge-ut { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .theme-dark .participant-row.dragging { box-shadow: 0 8px 32px rgba(0,0,0,0.5); border-color: rgba(255,255,255,0.2); }
+  .theme-dark .drag-over-above { border-top-color: #7c3aed; }
+  .theme-dark .drag-over-below { border-bottom-color: #7c3aed; }
+
+  /* Theme: Light (usertesting) */
+  body.theme-light { background: #f8f9fb; color: #1e293b; }
+  .theme-light .tab-bar { background: #fff; border-color: #e2e8f0; }
+  .theme-light .tab { color: #94a3b8; }
+  .theme-light .tab:hover { color: #475569; background: #f1f5f9; }
+  .theme-light .tab.active { color: #0f172a; background: #e2e8f0; }
+  .theme-light h1 { color: #0f172a; }
+  .theme-light .subtitle { color: #64748b; }
+  .theme-light .participant-row { background: #fff; border-color: #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .theme-light .participant-row:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .theme-light .pid { color: #0f172a; }
+  .theme-light .prole { color: #94a3b8; }
+  .theme-light .drag-handle { color: #cbd5e1; }
+  .theme-light .participant-row:hover .drag-handle { color: #94a3b8; }
+  .theme-light .phase-label { color: #94a3b8; }
+  .theme-light .instructions { color: #94a3b8; background: #fff; border-color: #e2e8f0; }
+  .theme-light .instructions strong { color: #64748b; }
+  .theme-light .legend-item { color: #64748b; }
+  .theme-light .summary-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .theme-light .summary-card h3 { color: #0f172a; }
+  .theme-light .summary-card p { color: #64748b; }
+  .theme-light #quote-tooltip { background: #fff; border-color: #e2e8f0; box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+  .theme-light .tooltip-quote { color: #1e293b; }
+  .theme-light .tooltip-pid { color: #94a3b8; }
+  .theme-light .study-badge-mod { background: rgba(124,58,237,0.08); color: #7c3aed; border-color: rgba(124,58,237,0.2); }
+  .theme-light .study-badge-ut { background: rgba(251,146,60,0.08); color: #ea580c; border-color: rgba(251,146,60,0.2); }
+  .theme-light .participant-row.dragging { box-shadow: 0 8px 32px rgba(0,0,0,0.1); border-color: #94a3b8; }
+  .theme-light .drag-over-above { border-top-color: #ea580c; }
+  .theme-light .drag-over-below { border-bottom-color: #ea580c; }
+  .theme-light canvas.landscape-canvas { background: rgba(0,0,0,0.015); border-radius: 6px; }
+
+  /* Shared layout */
+  .page-wrap { padding: 24px 40px 64px; min-width: 1000px; }
+  .tab-bar {
+    position: sticky; top: 0; z-index: 900;
+    display: flex; gap: 4px; padding: 8px 40px;
+    border-bottom: 1px solid; transition: background 0.3s, border-color 0.3s;
+  }
+  .tab {
+    padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; border: none; background: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab .tab-count {
+    font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
+    background: rgba(124,58,237,0.15); color: #a78bfa;
+  }
+  .tab:nth-child(2) .tab-count { background: rgba(251,146,60,0.15); color: #fb923c; }
+  .tab:nth-child(3) .tab-count { background: rgba(59,130,246,0.15); color: #60a5fa; }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; transition: color 0.3s; }
+  .subtitle { font-size: 13px; margin-bottom: 12px; max-width: 820px; line-height: 1.5; transition: color 0.3s; }
+  .legend { display: flex; gap: 18px; margin: 8px 0 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+  .legend-swatch { width: 18px; height: 7px; border-radius: 3px; }
+  .instructions {
+    font-size: 11px; margin-bottom: 20px; padding: 7px 14px;
+    border-radius: 8px; border: 1px solid; display: inline-block; transition: all 0.3s;
+  }
+
+  #sortable-container { position: relative; }
+  .participant-row {
+    position: relative; margin-bottom: 7px; border-radius: 12px;
+    padding: 9px 20px 5px; border: 1px solid;
+    cursor: grab; transition: all 0.15s;
+  }
+  .participant-row.dragging { opacity: 0.9; transform: scale(1.01); z-index: 100; cursor: grabbing; }
+  .drag-over-above { border-top: 2px solid; }
+  .drag-over-below { border-bottom: 2px solid; }
+
+  .row-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 0; }
+  .drag-handle { font-size: 14px; cursor: grab; margin-right: 2px; transition: color 0.15s; }
+  .pid { font-size: 13px; font-weight: 700; }
+  .prole { font-size: 10px; }
+  .study-badge {
+    font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 7px; border-radius: 4px; border: 1px solid; margin-left: 4px;
+  }
+  .ppattern {
+    margin-left: auto; font-size: 9px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.4px; padding: 2px 8px; border-radius: 8px; white-space: nowrap;
+  }
+
+  .chart-area { position: relative; height: 64px; margin-top: 3px; }
+  canvas.landscape-canvas { display: block; width: 100%; height: 64px; border-radius: 6px; }
+  .phase-labels { position: relative; height: 18px; margin-top: 1px; }
+  .phase-label {
+    position: absolute; font-size: 8px; text-align: center;
+    transform: translateX(-50%); line-height: 1.3; white-space: nowrap;
+    cursor: default; transition: color 0.15s;
+  }
+  .phase-label:hover { color: #0f172a !important; }
+  .theme-dark .phase-label:hover { color: #e2e8f0 !important; }
+  .phase-label.ai-label { color: #7c3aed; font-weight: 600; }
+  .phase-label.ext-label { color: #db2777; font-weight: 600; }
+  .phase-label.elem-label { color: #059669; font-weight: 600; }
+  .phase-label.ask-label { color: #ea580c; font-weight: 600; }
+
+  #cursor-dot {
+    position: fixed; width: 12px; height: 12px; border-radius: 50%;
+    pointer-events: none; z-index: 500; opacity: 0; transition: opacity 0.12s; transform: translate(-50%, -50%);
+  }
+  #cursor-dot.visible { opacity: 1; }
+  #cursor-dot::before { content:''; position:absolute; inset:-4px; border-radius:50%; background:inherit; opacity:0.3; animation: dp 1.4s ease-in-out infinite; }
+  #cursor-dot::after { content:''; position:absolute; inset:-9px; border-radius:50%; background:inherit; opacity:0.12; animation: dp 1.4s ease-in-out infinite 0.2s; }
+  @keyframes dp { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.5);opacity:0.08} }
+  #cursor-line { position: fixed; width: 1px; pointer-events: none; z-index: 499; opacity: 0; transition: opacity 0.12s; }
+  #cursor-line.visible { opacity: 0.25; }
+
+  #quote-tooltip {
+    position: fixed; max-width: 320px; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid; pointer-events: auto; opacity: 0; transition: opacity 0.15s;
+    z-index: 1000; font-size: 12px; line-height: 1.5; display: none;
+  }
+  #quote-tooltip.visible { opacity: 1; display: block; }
+  .tooltip-close {
+    position: absolute; top: 6px; right: 8px; font-size: 14px; cursor: pointer;
+    opacity: 0.4; transition: opacity 0.15s; background: none; border: none; padding: 2px 4px; line-height: 1;
+  }
+  .theme-dark .tooltip-close { color: #e2e8f0; }
+  .theme-light .tooltip-close { color: #1e293b; }
+  .tooltip-close:hover { opacity: 1; }
+  .tooltip-step { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; display: block; padding-right: 16px; }
+  .tooltip-quote { font-style: italic; display: block; }
+  .tooltip-quote::before { content:'\201C'; color: #7c3aed; font-size: 15px; margin-right: 2px; }
+  .tooltip-quote::after { content:'\201D'; color: #7c3aed; font-size: 15px; margin-left: 2px; }
+  .theme-light .tooltip-quote::before, .theme-light .tooltip-quote::after { color: #ea580c; }
+  .tooltip-pid { font-size: 10px; margin-top: 6px; display: block; }
+  .phase-label.has-quote { cursor: pointer; }
+  .phase-label.has-quote:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  .summary-section { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .summary-card { border-radius: 12px; padding: 14px 16px; border: 1px solid; transition: all 0.3s; }
+  .summary-card h3 { font-size: 12px; font-weight: 700; margin-bottom: 5px; }
+  .summary-card p { font-size: 11px; line-height: 1.55; }
+  .hidden { display: none; }
+</style>
+</head>
+<body class="theme-dark">
+
+<div class="tab-bar">
+  <button class="tab active" data-tab="moderated">Moderated Sessions <span class="tab-count">7</span></button>
+  <button class="tab" data-tab="usertesting">UserTesting (Current State) <span class="tab-count">9</span></button>
+  <button class="tab" data-tab="compare">Compare All <span class="tab-count">16</span></button>
+</div>
+
+<div id="cursor-dot"></div>
+<div id="cursor-line"></div>
+<div id="quote-tooltip">
+  <button class="tooltip-close">&times;</button>
+  <span class="tooltip-step"></span>
+  <span class="tooltip-quote"></span>
+  <span class="tooltip-pid"></span>
+</div>
+
+<div class="page-wrap">
+  <div id="tab-header-moderated">
+    <h1>Where AI rises and falls across each workflow</h1>
+    <p class="subtitle">Moderated 1:1 sessions with prototype exposure. <strong>Height</strong> = AI intensity. <strong>Click step labels</strong> for verbatim quotes. <strong>Drag</strong> to reorder.</p>
+  </div>
+  <div id="tab-header-usertesting" class="hidden">
+    <h1>How users work with AI in Canva today</h1>
+    <p class="subtitle">Unmoderated UserTesting sessions showing <strong>current-state workflows</strong> — no prototype, no new features. Compare with the Moderated tab to see how mental models shift.</p>
+  </div>
+  <div id="tab-header-compare" class="hidden">
+    <h1>Compare: Moderated vs. Current State</h1>
+    <p class="subtitle">All 16 participants in one view. <span style="color:#a78bfa;">Purple badges</span> = moderated (prototype). <span style="color:#fb923c;">Orange badges</span> = UserTesting (current state). Drag to place them side by side.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div>Canva AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#059669,#34d399);"></div>AI in Elements</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#ea580c,#fb923c);"></div>Ask Canva / Magic Write</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(90deg,#db2777,#f472b6);"></div>External AI</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:rgba(128,128,128,0.2);"></div>Manual / Search</div>
+  </div>
+
+  <div class="instructions">
+    <strong>↕ Drag rows</strong> to reorder &nbsp;|&nbsp; <strong>Click steps</strong> for quotes &nbsp;|&nbsp; <strong>Tabs</strong> to switch views
+  </div>
+
+  <div id="sortable-container"></div>
+  <div id="summary-container"></div>
+</div>
+
+<script>
+const moderated = [
+  { id:'P1', role:'Media Production Agency', pattern:'End-loaded', patternColor:'#7c3aed', study:'mod',
+    segments:[
+      {x1:0,x2:0.13,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"The best thing about Canva is the templates\u2026 there\u2019s a lot of variability\u2026 most of them are really, really well done."},
+      {x1:0.13,x2:0.28,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Select pages',labelClass:'',quote:"If I find one or two pages out of the 15 that I like, I will use those as the basic foundation."},
+      {x1:0.28,x2:0.55,peak:0.10,color:'rgba(128,128,128,0.12)',label:'Manual customisation',labelClass:'',quote:"It\u2019s way easier for me to just find the template and then add the colors myself than it is to prompt."},
+      {x1:0.55,x2:0.72,peak:0.55,color:'#ea580c',label:'Magic Write',labelClass:'ask-label',quote:"I would go into Magic Write\u2026 ask it to write an intro, and then once it generates an intro that I\u2019m okay with, I go in and edit it."},
+      {x1:0.72,x2:0.88,peak:0.72,color:'#059669',label:'Generate in Elements',labelClass:'elem-label',quote:"90% of generating, to me, is for flourishes and final touches. It\u2019s not for the overarching theme."},
+      {x1:0.88,x2:1.0,peak:0.10,color:'rgba(128,128,128,0.12)',label:'Manual polish',labelClass:'',quote:"I would take this file and edit it myself\u2026 add effects, a drop shadow, a neon glow."}]},
+  { id:'P2', role:'Marketing Agency + Nonprofit', pattern:'Barbell', patternColor:'#3b82f6', study:'mod',
+    segments:[
+      {x1:0,x2:0.08,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search',labelClass:'',quote:"For the layout of a slideshow, I don\u2019t need anything that AI has to generate. There\u2019s already so many good ones."},
+      {x1:0.08,x2:0.26,peak:0.82,color:'#059669',label:'Generate niche visuals',labelClass:'elem-label',quote:"If there\u2019s something really creative or gimmicky\u2026 I\u2019ll probably try and have AI specifically generate it."},
+      {x1:0.26,x2:0.42,peak:0.68,color:'#7c3aed',label:'Edit with Canva AI',labelClass:'ai-label',quote:"If it\u2019s close and I can give it a little more information to get it to the end, then that\u2019s good to interact with it."},
+      {x1:0.42,x2:0.64,peak:0.07,color:'rgba(128,128,128,0.08)',label:'Manual middle work',labelClass:'',quote:"In the middle, assuming I can do most things on my own without AI\u2026 I use it less."},
+      {x1:0.64,x2:0.84,peak:0.75,color:'#7c3aed',label:'AI polish & effects',labelClass:'ai-label',quote:"At the end, when I\u2019m trying to touch things up and create these little specific things, I probably use it more."},
+      {x1:0.84,x2:1.0,peak:0.08,color:'rgba(128,128,128,0.08)',label:'Final check',labelClass:'',quote:"I would copy this element, bring it over here, paste it\u2026 and figure out the way to position it best."}]},
+  { id:'P3', role:'Content Advisor \u00b7 Mining + Freelance', pattern:'Search-first, AI fallback', patternColor:'#eab308', study:'mod',
+    segments:[
+      {x1:0,x2:0.18,peak:0.85,color:'#db2777',label:'External LLM',labelClass:'ext-label',quote:"Having that written list sorted before you start to do any of the visuals for the presentation."},
+      {x1:0.18,x2:0.40,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search stock',labelClass:'',quote:"My preference is to see what already exists\u2026 I don\u2019t like using AI if I don\u2019t have to because of the sustainability issues."},
+      {x1:0.40,x2:0.58,peak:0.50,color:'#059669',label:'Generate if fails',labelClass:'elem-label',quote:"There\u2019s no options that have anything like what I\u2019d be looking for. So that\u2019s where I\u2019d go to generate."},
+      {x1:0.58,x2:0.74,peak:0.08,color:'rgba(128,128,128,0.08)',label:'Background removal',labelClass:'',quote:"I remove backgrounds and create composites\u2026 it\u2019s about realizing the vision rather than just relying on AI."},
+      {x1:0.74,x2:0.88,peak:0.35,color:'#ea580c',label:'Magic Extend',labelClass:'ask-label',quote:"I\u2019d go into edit and try magic extend\u2026 to magically fill out the background."},
+      {x1:0.88,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Fix artefacts',labelClass:'',quote:"Sometimes I\u2019ll go in with the manual eraser and remove or add back in parts that it\u2019s got wrong."}]},
+  { id:'P4', role:'Corporate Comms \u00b7 Comcast', pattern:'Last resort', patternColor:'#ef4444', study:'mod',
+    segments:[
+      {x1:0,x2:0.24,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Duplicate past project',labelClass:'',quote:"I can dupe a previous presentation\u2026 just do a carbon copy of what we did for Compliance Week."},
+      {x1:0.24,x2:0.48,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search brand library',labelClass:'',quote:"I go searching for stuff first. Is there an existing cartoon picture or an actual photo of this?"},
+      {x1:0.48,x2:0.70,peak:0.07,color:'rgba(128,128,128,0.10)',label:'Manual layout',labelClass:'',quote:"I would just start editing\u2026 adding text, using our font\u2026 pulling logos."},
+      {x1:0.70,x2:0.84,peak:0.22,color:'#059669',label:'Generate (reluctantly)',labelClass:'elem-label',quote:"I would use AI as like a last resort where I\u2019m like, okay, that\u2019s kind of as far as I\u2019m gonna go."},
+      {x1:0.84,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual workarounds',labelClass:'',quote:"It\u2019s almost like going with what you know and going with the path of least resistance."}]},
+  { id:'P5', role:'Digital Marketing \u00b7 Italy', pattern:'Surgical', patternColor:'#10b981', study:'mod',
+    segments:[
+      {x1:0,x2:0.16,peak:0.60,color:'#db2777',label:'External LLMs',labelClass:'ext-label',quote:"I\u2019m working outside Canva with LLMs and Google Docs to create an outline."},
+      {x1:0.16,x2:0.32,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Select template',labelClass:'',quote:"I never start with a blank page. We always start with a template\u2026 I\u2019m not a designer."},
+      {x1:0.32,x2:0.48,peak:0.08,color:'rgba(128,128,128,0.10)',label:'Manual transposition',labelClass:'',quote:"I want to feel the presentation is being built and add that human touch."},
+      {x1:0.48,x2:0.64,peak:0.48,color:'#ea580c',label:'Ask Canva: translate',labelClass:'ask-label',quote:"This sentence is too hard for my audience\u2026 Ask Canva will respect the size so the output still looks good."},
+      {x1:0.64,x2:0.82,peak:0.45,color:'#059669',label:'Generate in Elements',labelClass:'elem-label',quote:"It sometimes happens that I have to create an icon, and I generate it inside Canva directly."},
+      {x1:0.82,x2:1.0,peak:0.07,color:'rgba(128,128,128,0.08)',label:'Manual edits',labelClass:'',quote:"I would go inside and edit the content just like I want."}]},
+  { id:'P6', role:'Sales \u00b7 Marketing Agency + Nonprofit', pattern:'External ideation \u2192 execution', patternColor:'#ec4899', study:'mod',
+    segments:[
+      {x1:0,x2:0.10,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"It tells me what I should even include in a pitch deck."},
+      {x1:0.10,x2:0.28,peak:0.80,color:'#db2777',label:'ChatGPT \u2192 Gemini',labelClass:'ext-label',quote:"I need you to make this more fun\u2026 a different vibe\u2026 put a spin on this for the Italian presentation."},
+      {x1:0.28,x2:0.42,peak:0.30,color:'#7c3aed',label:'Ingest (fails)',labelClass:'ai-label',quote:"I tried to format it into the slide with bullet points. And it cannot do that."},
+      {x1:0.42,x2:0.60,peak:0.62,color:'#059669',label:'Magic Media',labelClass:'elem-label',quote:"Something off-putting and unique is when I need to describe this in more detail."},
+      {x1:0.60,x2:0.78,peak:0.07,color:'rgba(128,128,128,0.08)',label:'Manual brand work',labelClass:'',quote:"I need to make sure it aligns with my brand\u2026 shifting all the colors and fonts."},
+      {x1:0.78,x2:1.0,peak:0.42,color:'#7c3aed',label:'AI conversation',labelClass:'ai-label',quote:"Kind of like your precursor history\u2026 I can see the previous prompts that I put in."}]},
+  { id:'P7', role:'Collaborative Design', pattern:'Front-loaded', patternColor:'#06b6d4', study:'mod',
+    segments:[
+      {x1:0,x2:0.26,peak:0.92,color:'#7c3aed',label:'Home \u2192 AI base',labelClass:'ai-label',quote:"I directly jump and use AI because with a detailed prompt I can explain exactly what I want\u2026 without wasting time."},
+      {x1:0.26,x2:0.48,peak:0.07,color:'rgba(128,128,128,0.10)',label:'Manual refinement',labelClass:'',quote:"The other stuff I can do without AI. It\u2019s just adding text and changing colors, changing fonts."},
+      {x1:0.48,x2:0.62,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search Elements',labelClass:'',quote:"I want to add something like a 3D image\u2026 I can just click here and generate it."},
+      {x1:0.62,x2:0.82,peak:0.58,color:'#7c3aed',label:'Edit with Canva AI',labelClass:'ai-label',quote:"I can refine this picture\u2026 I just click on it and write\u2026 change from daylight to nighttime."},
+      {x1:0.82,x2:1.0,peak:0.07,color:'rgba(128,128,128,0.08)',label:'Final adjustments',labelClass:'',quote:"No need for AI intervention\u2026 I can do them manually."}]}
+];
+
+const usertesting = [
+  { id:'UT-P1', role:'Cancer Advocacy \u00b7 Marketing', pattern:'Search-first explorer', patternColor:'#3b82f6', study:'ut',
+    segments:[
+      {x1:0,x2:0.20,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I search Canvas template library all the time\u2026 generally how I go about doing things."},
+      {x1:0.20,x2:0.40,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Select & background',labelClass:'',quote:"I would use this and set it as the background and then sequentially change these."},
+      {x1:0.40,x2:0.60,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Manual customise',labelClass:'',quote:"I did search because generally I\u2019ve had better success with that."},
+      {x1:0.60,x2:0.80,peak:0.42,color:'#059669',label:'AI generation (testing)',labelClass:'elem-label',quote:"The only way we can figure out how much things are progressing is if you keep testing."},
+      {x1:0.80,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual edit',labelClass:'',quote:"If something\u2019s very unique\u2026 I would want to make sure it was specifically good. It probably doesn\u2019t exist. So I generate it."}]},
+  { id:'UT-P2', role:'Business Owner \u00b7 Italian Nonprofit', pattern:'Templates + AI scattered', patternColor:'#8b5cf6', study:'ut',
+    segments:[
+      {x1:0,x2:0.12,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I typically start with presentations\u2026 then I\u2019ll type in presentation and start from there."},
+      {x1:0.12,x2:0.25,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Apply branding',labelClass:'',quote:"Typically what I like to do right away is brand it\u2026 put the colors in here."},
+      {x1:0.25,x2:0.40,peak:0.45,color:'#ea580c',label:'Ask Canva',labelClass:'ask-label',quote:"I did ask Canva to create this into more of an outline\u2026 but it didn\u2019t work the way I wanted."},
+      {x1:0.40,x2:0.58,peak:0.52,color:'#059669',label:'Generate images',labelClass:'elem-label',quote:"I did ask it to generate images\u2026 Italian building. That actually did work quite well."},
+      {x1:0.58,x2:0.75,peak:0.38,color:'#ea580c',label:'Magic Write',labelClass:'ask-label',quote:"I would use the magic write. Sometimes I ask Canva to rewrite or suggest improvements."},
+      {x1:0.75,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Feels disconnected',labelClass:'',quote:"I still think it can be better because I\u2019m using Gamma and Beautiful AI."}]},
+  { id:'UT-P3', role:'Student \u00b7 Smart Cities', pattern:'AI-first (exception)', patternColor:'#f59e0b', study:'ut',
+    segments:[
+      {x1:0,x2:0.15,peak:0.80,color:'#db2777',label:'ChatGPT content',labelClass:'ext-label',quote:"I use ChatGPT for getting all the information I need for the presentation content."},
+      {x1:0.15,x2:0.38,peak:0.88,color:'#7c3aed',label:'Canva AI generates deck',labelClass:'ai-label',quote:"The Canva AI gave me the presentation ready to present\u2026 a minimalist and appealing presentation in just seconds."},
+      {x1:0.38,x2:0.52,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Delete excess',labelClass:'',quote:"Only two slides are useful. The rest isn\u2019t providing value."},
+      {x1:0.52,x2:0.65,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search photos',labelClass:'',quote:"Searching through thousands of templates\u2026 you get so bored and tired."},
+      {x1:0.65,x2:0.82,peak:0.45,color:'#059669',label:'Generate image',labelClass:'elem-label',quote:"Why won\u2019t I generate an image for Copenhagen\u2026 this is pretty good."},
+      {x1:0.82,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual charts',labelClass:'',quote:"The AI won\u2019t do it itself and just gives me instructions. I don\u2019t want to do it myself."}]},
+  { id:'UT-P4', role:'Non-English Speaker \u00b7 Corporate', pattern:'AI as speed tool', patternColor:'#10b981', study:'ut',
+    segments:[
+      {x1:0,x2:0.18,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I search for technology\u2026 templates help me faster and keep a clean structure."},
+      {x1:0.18,x2:0.38,peak:0.52,color:'#059669',label:'Generate in Elements',labelClass:'elem-label',quote:"I create new animations with artificial intelligence\u2026 the AI works for me."},
+      {x1:0.38,x2:0.55,peak:0.48,color:'#ea580c',label:'Magic Write',labelClass:'ask-label',quote:"I use magic write because it is very faster than other options."},
+      {x1:0.55,x2:0.78,peak:0.55,color:'#7c3aed',label:'Canva AI presentation',labelClass:'ai-label',quote:"I can create a presentation with only a description\u2026 new designs and different animations."},
+      {x1:0.78,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual adjustments',labelClass:'',quote:"The AI tools are easy and clear to use\u2026 I didn\u2019t need much time."}]},
+  { id:'UT-P6', role:'Digital Marketing \u00b7 Italy (ESG)', pattern:'Library loyalist', patternColor:'#06b6d4', study:'ut',
+    segments:[
+      {x1:0,x2:0.14,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Duplicate previous',labelClass:'',quote:"I duplicated a project already personalized with my own elements like logo, fonts."},
+      {x1:0.14,x2:0.28,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I would start with a template\u2026 business meeting\u2026 search for presets."},
+      {x1:0.28,x2:0.40,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Apply brand',labelClass:'',quote:"Adapt colors to my own official palette\u2026 make sure everyone is aligned."},
+      {x1:0.40,x2:0.54,peak:0.38,color:'#ea580c',label:'Ask Canva copy',labelClass:'ask-label',quote:"I need a catchy title to present last month\u2019s results\u2026 this is very handy."},
+      {x1:0.54,x2:0.70,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search photos',labelClass:'',quote:"The search function is quite good\u2026 you can be detailed with your searches."},
+      {x1:0.70,x2:0.85,peak:0.22,color:'#059669',label:'Generate (reluctant)',labelClass:'elem-label',quote:"I don\u2019t use this function a lot because for a matter of speed."},
+      {x1:0.85,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual finish',labelClass:'',quote:"Searching is actually faster than waiting for AI to generate."}]},
+  { id:'UT-P7/P8', role:'ESG Institute \u00b7 Poland', pattern:'Templates always, AI struggle', patternColor:'#ef4444', study:'ut',
+    segments:[
+      {x1:0,x2:0.18,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I always search for templates. That\u2019s my natural way of working with Canva."},
+      {x1:0.18,x2:0.32,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Apply brand',labelClass:'',quote:"ESG Institute brand\u2026 playing with the colors and see which slides look best."},
+      {x1:0.32,x2:0.48,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search Elements',labelClass:'',quote:"I go to elements, choose photos\u2026 something for software benefits."},
+      {x1:0.48,x2:0.64,peak:0.28,color:'#059669',label:'Try to generate',labelClass:'elem-label',quote:"It\u2019s boring what I see. So I\u2019ll ask to generate\u2026 but the prompt needs to be perfect. It takes irritation."},
+      {x1:0.64,x2:0.78,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Give up \u2192 library',labelClass:'',quote:"This is too difficult. I don\u2019t have time\u2026 I ended up taking from the library."},
+      {x1:0.78,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual finish',labelClass:'',quote:"I prefer the real ones\u2026 I know this is AI, not the real one."}]},
+  { id:'UT-P9', role:'HVAC Marketing \u00b7 Nashville', pattern:'Templates + AI polish', patternColor:'#8b5cf6', study:'ut',
+    segments:[
+      {x1:0,x2:0.15,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I love what Canva has done\u2026 let\u2019s do marketing pitch deck."},
+      {x1:0.15,x2:0.30,peak:0.48,color:'#ea580c',label:'Ask Canva text',labelClass:'ask-label',quote:"Can you make me a title using a font similar to Beavis Nui\u2026 I love using this."},
+      {x1:0.30,x2:0.48,peak:0.52,color:'#059669',label:'Magic Media',labelClass:'elem-label',quote:"Create an American Standard HVAC heat pump photo\u2026 see how good that is?"},
+      {x1:0.48,x2:0.60,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Manual customise',labelClass:'',quote:"That\u2019s not American Standard\u2019s logo\u2026 I can\u2019t use AI for copyright reasons. Search is best."},
+      {x1:0.60,x2:0.78,peak:0.38,color:'#7c3aed',label:'Try Canva AI deck',labelClass:'ai-label',quote:"I\u2019d like three different designs with different styles\u2026 more options would be awesome."},
+      {x1:0.78,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Prefer templates',labelClass:'',quote:"It makes more sense to start with templates\u2026 you guys have such good templates."}]},
+  { id:'UT-P10', role:'Band Promo \u00b7 Tone of Voice', pattern:'Elements AI power user', patternColor:'#059669', study:'ut',
+    segments:[
+      {x1:0,x2:0.14,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search templates',labelClass:'',quote:"I would normally search templates\u2026 to see if anyone\u2019s already done something I can use."},
+      {x1:0.14,x2:0.26,peak:0.30,color:'#7c3aed',label:'Try Canva AI (new!)',labelClass:'ai-label',quote:"I hadn\u2019t clocked that Canva AI existed up here until I did the test."},
+      {x1:0.26,x2:0.48,peak:0.68,color:'#059669',label:'Generate in Elements',labelClass:'elem-label',quote:"I used AI image generator in the Elements tab\u2026 typed in Cyberpunk Cityscape."},
+      {x1:0.48,x2:0.65,peak:0.08,color:'rgba(128,128,128,0.10)',label:'Layer composites',labelClass:'',quote:"I layered all images on top of each other to create original artwork."},
+      {x1:0.65,x2:0.82,peak:0.32,color:'#ea580c',label:'Background remove',labelClass:'ask-label',quote:"I would use Magic Expand\u2026 clear off parts and lay them on top of each other."},
+      {x1:0.82,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual finish',labelClass:'',quote:"If there\u2019s an image already there I prefer that\u2026 some AI images look fake and people clock it."}]},
+  { id:'UT-P12', role:'Corporate Comms \u00b7 Data Privacy', pattern:'Search-then-AI, brand-locked', patternColor:'#ec4899', study:'ut',
+    segments:[
+      {x1:0,x2:0.20,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Duplicate previous',labelClass:'',quote:"My templates are my previous designs which are brand compliant."},
+      {x1:0.20,x2:0.40,peak:0.08,color:'rgba(128,128,128,0.12)',label:'Search Elements',labelClass:'',quote:"I\u2019m preconditioned to look at these things first because maybe they have something I like."},
+      {x1:0.40,x2:0.56,peak:0.28,color:'#ea580c',label:'Magic recommendations',labelClass:'ask-label',quote:"The magic recommendations are where I usually go\u2026 letting it guide me first."},
+      {x1:0.56,x2:0.72,peak:0.22,color:'#059669',label:'Generate if needed',labelClass:'elem-label',quote:"If they don\u2019t have something I like, I\u2019ll maybe generate\u2026 I\u2019m wary of AI-looking images."},
+      {x1:0.72,x2:0.88,peak:0.06,color:'rgba(128,128,128,0.08)',label:'Manual edits',labelClass:'',quote:"My normal workflow\u2026 crop or uncrop it and then use it."},
+      {x1:0.88,x2:1.0,peak:0.06,color:'rgba(128,128,128,0.10)',label:'Brand constraints',labelClass:'',quote:"Brand guidelines are relatively strict\u2026 knowing those constraints first."}]}
+];
+
+const summaries = {
+  moderated: [
+    {h:'6 of 7 start with Search or Duplication \u2014 not AI', p:'Only P7 leads with AI generation. Everyone else uses templates or past projects as their foundation before AI enters.'},
+    {h:'Pink peaks happen before Canva', p:'P3, P5, and P6 show pink (external AI) swells at the far left \u2014 work happening in ChatGPT or Gemini before Canva is even open.'},
+    {h:'Every landscape returns to flat ground', p:'No matter how tall the peaks, every participant finishes with manual work. Nobody hands the last mile to AI.'},
+    {h:'The manual valley is universal', p:'Across all 7, the centre of the workflow is the lowest point. AI lives at the edges \u2014 start, end, or both.'}
+  ],
+  usertesting: [
+    {h:'8 of 9 start with templates or duplication', p:'Only UT-P3 leads with AI. The current-state mental model is overwhelmingly template-first.'},
+    {h:'AI peaks are lower and rarer', p:'Compare these flatter landscapes with the moderated sessions. Current-state users use far less AI and with less confidence.'},
+    {h:'Search \u2192 Generate is triggered by failure', p:'No user proactively generates. They search first and only switch to AI when the library fails. UT-P7/P8 even gave up and fell back.'},
+    {h:'Canva AI is invisible to most', p:'UT-P10: \u201CI hadn\u2019t clocked that Canva AI existed.\u201D Only UT-P3 and UT-P4 use it as a primary tool.'}
+  ],
+  compare: [
+    {h:'Moderated sessions show taller, bolder peaks', p:'After prototype exposure, participants used AI more confidently. Compare mod-P2\u2019s barbell with UT-P7/P8\u2019s flatline \u2014 same \u201Ctemplates first\u201D instinct but vastly different AI engagement.'},
+    {h:'External AI (pink) only appears in moderated', p:'3 moderated participants use ChatGPT/Gemini. No UserTesting participant mentions external LLMs in their current workflow \u2014 suggesting the prototype made them reflect on their full tool ecosystem.'},
+    {h:'The \u201Cmanual valley\u201D is consistent across both groups', p:'Both moderated and current-state users have a quiet manual section in the middle. AI lives at the edges regardless of prototype exposure.'},
+    {h:'Drag to compare directly', p:'Try placing mod-P4 (Last resort) next to UT-P12 (Brand-locked) \u2014 both corporate users with near-flat landscapes. Then drag mod-P7 (Front-loaded) next to UT-P3 (AI-first) to see the only two AI-leading participants.'}
+  ]
+};
+
+const cursorDot = document.getElementById('cursor-dot');
+const cursorLine = document.getElementById('cursor-line');
+const tooltip = document.getElementById('quote-tooltip');
+const tStep = tooltip.querySelector('.tooltip-step');
+const tQuote = tooltip.querySelector('.tooltip-quote');
+const tPid = tooltip.querySelector('.tooltip-pid');
+const container = document.getElementById('sortable-container');
+const summaryContainer = document.getElementById('summary-container');
+
+let currentTab = 'moderated';
+let currentOrder = [];
+
+let activeLabel = null;
+function showTooltipAt(el, l, q, pid, c) {
+  tStep.textContent=l; tStep.style.color=c||'#94a3b8'; tQuote.textContent=q; tPid.textContent='\u2014 '+pid;
+  tooltip.classList.add('visible');
+  const r=el.getBoundingClientRect();
+  let x=r.left+r.width/2, y=r.top-8;
+  tooltip.style.left=x+'px'; tooltip.style.top='0px'; tooltip.style.display='block'; tooltip.style.opacity='0';
+  requestAnimationFrame(()=>{
+    const tw=tooltip.offsetWidth, th=tooltip.offsetHeight;
+    x=r.left+r.width/2-tw/2; y=r.top-th-8;
+    if(x+tw>window.innerWidth-12) x=window.innerWidth-tw-12;
+    if(x<12) x=12;
+    if(y<12) y=r.bottom+8;
+    tooltip.style.left=x+'px'; tooltip.style.top=y+'px'; tooltip.style.opacity='1';
+  });
+}
+function hideTooltip() { tooltip.classList.remove('visible'); tooltip.style.display='none'; activeLabel=null; }
+tooltip.querySelector('.tooltip-close').addEventListener('click', hideTooltip);
+document.addEventListener('click', e => { if(activeLabel && !tooltip.contains(e.target) && e.target!==activeLabel) hideTooltip(); });
+
+function sampleIntensity(segs, t) {
+  for (const s of segs) { if (t>=s.x1&&t<s.x2) { const c=(s.x1+s.x2)/2,h=(s.x2-s.x1)/2,n=(t-c)/h; const b=Math.exp(-3*n*n); return {intensity:s.peak*b+0.03*(1-b),color:s.color}; } }
+  return {intensity:0.03,color:'rgba(128,128,128,0.08)'};
+}
+function parseColor(c) {
+  if(c.startsWith('#')){const h=c.slice(1);return{r:parseInt(h.substring(0,2),16),g:parseInt(h.substring(2,4),16),b:parseInt(h.substring(4,6),16),a:1};}
+  const m=c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if(m)return{r:+m[1],g:+m[2],b:+m[3],a:m[4]!==undefined?+m[4]:1}; return{r:128,g:128,b:128,a:0.08};
+}
+function segColor(s) { if(s.labelClass==='ai-label')return'#a78bfa'; if(s.labelClass==='elem-label')return'#34d399'; if(s.labelClass==='ask-label')return'#fb923c'; if(s.labelClass==='ext-label')return'#f472b6'; return'#94a3b8'; }
+function findSeg(segs, canvas, cx) { const r=canvas.getBoundingClientRect(),t=(cx-r.left)/r.width; for(const s of segs){if(t>=s.x1&&t<s.x2)return s;} return null; }
+
+function drawLandscape(canvas, segs, light) {
+  const dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect(), w=rect.width, h=rect.height;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  const bl=h-1, mH=h-6, steps=Math.floor(w);
+  for(let i=0;i<steps;i++){
+    const{intensity,color}=sampleIntensity(segs,(i+0.5)/steps);
+    const bH=Math.max(2,intensity*mH), pc=parseColor(color);
+    const grad=ctx.createLinearGradient(0,bl-bH,0,bl);
+    if(light){ grad.addColorStop(0,`rgba(${pc.r},${pc.g},${pc.b},${pc.a*0.75})`); grad.addColorStop(0.5,`rgba(${pc.r},${pc.g},${pc.b},${pc.a*0.45})`); grad.addColorStop(1,`rgba(${pc.r},${pc.g},${pc.b},${pc.a*0.08})`); }
+    else{ grad.addColorStop(0,`rgba(${pc.r},${pc.g},${pc.b},${pc.a*0.9})`); grad.addColorStop(0.4,`rgba(${pc.r},${pc.g},${pc.b},${pc.a*0.7})`); grad.addColorStop(1,`rgba(${pc.r},${pc.g},${pc.b},${pc.a*0.15})`); }
+    ctx.fillStyle=grad; ctx.fillRect(i,bl-bH,1.5,bH);
+  }
+  ctx.beginPath();
+  for(let i=0;i<=steps;i++){const{intensity}=sampleIntensity(segs,i/steps);const y=bl-Math.max(2,intensity*mH);if(i===0)ctx.moveTo(0,y);else ctx.lineTo(i,y);}
+  const eg=ctx.createLinearGradient(0,0,w,0);
+  for(const s of segs){const pc=parseColor(s.color);eg.addColorStop(Math.min(1,Math.max(0,s.x1)),`rgba(${pc.r},${pc.g},${pc.b},0.8)`);eg.addColorStop(Math.min(1,Math.max(0,s.x2)),`rgba(${pc.r},${pc.g},${pc.b},0.8)`);}
+  ctx.strokeStyle=eg;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.strokeStyle=light?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.04)';ctx.lineWidth=0.5;ctx.setLineDash([4,6]);ctx.beginPath();ctx.moveTo(0,bl);ctx.lineTo(w,bl);ctx.stroke();ctx.setLineDash([]);
+}
+
+function switchTab(tab) {
+  hideTooltip();
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-header-moderated').classList.toggle('hidden', tab !== 'moderated');
+  document.getElementById('tab-header-usertesting').classList.toggle('hidden', tab !== 'usertesting');
+  document.getElementById('tab-header-compare').classList.toggle('hidden', tab !== 'compare');
+
+  if (tab === 'moderated') { document.body.className = 'theme-dark'; currentOrder = [...moderated]; }
+  else if (tab === 'usertesting') { document.body.className = 'theme-light'; currentOrder = [...usertesting]; }
+  else { document.body.className = 'theme-dark'; currentOrder = [...moderated, ...usertesting]; }
+  renderAll();
+}
+
+function renderAll() {
+  const isLight = currentTab === 'usertesting';
+  const showBadge = currentTab === 'compare';
+  container.innerHTML = '';
+  currentOrder.forEach((p, idx) => {
+    const row = document.createElement('div');
+    row.className = 'participant-row';
+    row.setAttribute('draggable', 'true');
+    row.dataset.idx = idx;
+    const badge = showBadge ? `<span class="study-badge ${p.study==='mod'?'study-badge-mod':'study-badge-ut'}">${p.study==='mod'?'Moderated':'UserTesting'}</span>` : '';
+    row.innerHTML = `<div class="row-header"><span class="drag-handle">\u2807</span><span class="pid">${p.id}</span>${badge}<span class="prole">${p.role}</span><span class="ppattern" style="background:${p.patternColor}18;color:${p.patternColor};border:1px solid ${p.patternColor}33;">${p.pattern}</span></div><div class="chart-area"><canvas class="landscape-canvas"></canvas></div><div class="phase-labels"></div>`;
+    const canvas = row.querySelector('.landscape-canvas');
+    canvas.addEventListener('mousemove', e => {
+      const seg = findSeg(p.segments, canvas, e.clientX);
+      const rect=canvas.getBoundingClientRect(), t=(e.clientX-rect.left)/rect.width;
+      const{intensity}=sampleIntensity(p.segments,t);
+      const dotY=(rect.bottom-1)-Math.max(2,intensity*(rect.height-6));
+      const dc=segColor(seg||{labelClass:''});
+      cursorDot.style.left=e.clientX+'px';cursorDot.style.top=dotY+'px';cursorDot.style.background=dc;cursorDot.classList.add('visible');
+      cursorLine.style.left=e.clientX+'px';cursorLine.style.top=rect.top+'px';cursorLine.style.height=rect.height+'px';cursorLine.style.background=dc;cursorLine.classList.add('visible');
+    });
+    canvas.addEventListener('mouseleave',()=>{cursorDot.classList.remove('visible');cursorLine.classList.remove('visible');});
+    const labels=row.querySelector('.phase-labels');
+    p.segments.forEach(seg=>{
+      const lbl=document.createElement('span');lbl.className=`phase-label ${seg.labelClass}`;
+      lbl.style.left=`${((seg.x1+seg.x2)/2*100).toFixed(1)}%`;lbl.textContent=seg.label;
+      if(seg.quote){lbl.classList.add('has-quote');lbl.addEventListener('click',e=>{e.stopPropagation();if(activeLabel===lbl){hideTooltip();return;}activeLabel=lbl;showTooltipAt(lbl,seg.label,seg.quote,p.id+' \u2014 '+p.role,segColor(seg));});}
+      labels.appendChild(lbl);
+    });
+    container.appendChild(row);
+    requestAnimationFrame(()=>drawLandscape(canvas,p.segments,isLight));
+  });
+  attachDragListeners();
+
+  const sums = summaries[currentTab];
+  summaryContainer.innerHTML = `<div class="summary-section">${sums.map(s=>`<div class="summary-card"><h3>${s.h}</h3><p>${s.p}</p></div>`).join('')}</div>`;
+}
+
+let dragSrcIdx = null;
+function attachDragListeners() {
+  const rows=container.querySelectorAll('.participant-row');
+  rows.forEach(row=>{
+    row.addEventListener('dragstart',e=>{dragSrcIdx=+row.dataset.idx;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragSrcIdx);});
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');rows.forEach(r=>{r.classList.remove('drag-over-above');r.classList.remove('drag-over-below');});});
+    row.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';const rect=row.getBoundingClientRect();rows.forEach(r=>{r.classList.remove('drag-over-above');r.classList.remove('drag-over-below');});if(e.clientY<rect.top+rect.height/2)row.classList.add('drag-over-above');else row.classList.add('drag-over-below');});
+    row.addEventListener('dragleave',()=>{row.classList.remove('drag-over-above');row.classList.remove('drag-over-below');});
+    row.addEventListener('drop',e=>{e.preventDefault();const ti=+row.dataset.idx;if(dragSrcIdx===null||dragSrcIdx===ti)return;const rect=row.getBoundingClientRect();const before=e.clientY<rect.top+rect.height/2;const item=currentOrder.splice(dragSrcIdx,1)[0];let ni=ti;if(dragSrcIdx<ti)ni--;if(!before)ni++;currentOrder.splice(ni,0,item);renderAll();});
+  });
+}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+window.addEventListener('resize',()=>{container.querySelectorAll('.landscape-canvas').forEach((c,i)=>drawLandscape(c,currentOrder[i].segments,currentTab==='usertesting'));});
+
+switchTab('moderated');
+</script>
+</body>
+</html>
